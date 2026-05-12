@@ -6,6 +6,12 @@ import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 const router = new Router();
 const app = new Application();
 
+//pepper:
+const PEPPER = Deno.env.get("PASSWORD_PEPPER");
+if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
+
+const SALT_ROUNDS = 12;
+
 // base données pour la connexion
 
 const data = [ 
@@ -15,12 +21,44 @@ const data = [
  {id : '4',nom : "kim",password_hash : await get_hash("tunnel"), connecte : false },
 ]
 
+/* test sql
+import mysql from "mysql";
+
+// Minimal connection config (edit as needed or use env vars)
+const connection = mysql.createConnection({
+  host: Deno.env.get("MYSQL_HOST") || "localhost",
+  port: Number(Deno.env.get("MYSQL_PORT") || "3306"),
+  user: Deno.env.get("MYSQL_USER") || "root",
+  password: Deno.env.get("MYSQL_PASSWORD") || "",
+  database: Deno.env.get("MYSQL_DATABASE") || "test",
+});
+
+connection.connect((err) => {
+  if (err) {
+    console.error("Connection error:", err);
+    return;
+  }
+  console.log("Connected!");
+  connection.query("SELECT VERSION() AS version", (err, results) => {
+    if (err) {
+      console.error("Query error:", err);
+    } else {
+      console.log("MySQL version:", results[0].version);
+    }
+    connection.end();
+  });
+});
+*/
+
+
+
 // foncttions
 
 async function get_hash(password: string): Promise<string> {
  const saltRounds = 10;
+ const peppered = password + PEPPER;
  const salt = await bcrypt.genSalt(saltRounds); // Generate the salt manually
- return await bcrypt.hash(password, salt); // Pass the salt to the hash function
+ return await bcrypt.hash(peppered, salt); // Pass the salt to the hash function
 }
 
 function removeTokenByUser(user: string) {
@@ -62,8 +100,8 @@ router.post("/login", async (ctx) => {
       ctx.response.body = { error: "Invalid username or password" };
       return;
    }
-
-   const result = await bcrypt.compare(passwd, isUser.password_hash);
+   const peppered = passwd + PEPPER;
+   const result = await bcrypt.compare(peppered, isUser.password_hash);
    if (!result) {
       console.log(" mauvais username et/ou mdp ")
       ctx.response.status = 401;
