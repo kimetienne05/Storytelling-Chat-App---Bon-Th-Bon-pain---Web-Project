@@ -1,2 +1,4 @@
 ./a.out
 .env
+cert.pem
+key.pem

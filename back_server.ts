@@ -3,6 +3,7 @@ import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts"
 import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+import { serve } from "https://deno.land/std/http/server.ts";
 const router = new Router();
 const app = new Application();
 
@@ -11,6 +12,8 @@ const PEPPER = Deno.env.get("PASSWORD_PEPPER");
 if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
 
 const SALT_ROUNDS = 12;
+
+
 
 // base données pour la connexion
 
@@ -155,15 +158,6 @@ if (Deno.args.length < 1) {
    Deno.exit();
 }
 
-const options = {port: Deno.args[0]}
-
-if (Deno.args.length >= 3) {
-   options.secure = true;
-   options.cert = await Deno.readTextFile(Deno.args[1]);
-   options.key = await Deno.readTextFile(Deno.args[2]);
-   console.log(`SSL conf ready (use https)`);
-}
-
 router.get("/chat", authorizationMiddleware, (ctx) => {
    if (!ctx.isUpgradable) {
    ctx.throw(501);
@@ -193,14 +187,19 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
 
 app.use(
    oakCors({
-      origin: `http://localhost:8080`, // Allow requests from this origin
+      origin: `https://localhost:8080`, // Allow requests from this origin
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
       allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
       credentials: true, // Allow credentials like cookies
    })
 );
-console.log(`Oak back server running on port ${options.port}`);
+console.log(`Oak back server running on port ${Deno.args[0]}`);
 
 app.use(router.routes());
 app.use(router.allowedMethods())
-await app.listen(options);
+await app.listen({
+  port: Number(Deno.args[0]),
+  secure: true,
+  key: await Deno.readTextFile("./key.pem"),
+  cert: await Deno.readTextFile("./cert.pem"),
+});

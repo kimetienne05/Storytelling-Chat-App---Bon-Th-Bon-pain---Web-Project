@@ -1,7 +1,7 @@
 function searchUser() { 
     let username = document.getElementById("Nom").value
     let passwd = document.getElementById("Mdp").value
-    fetch('http://localhost:3000/login', {
+    fetch('https://localhost:3000/login', {
     method : 'POST',
     mode : 'cors',
     credentials: 'include',
@@ -21,7 +21,7 @@ function searchUser() {
     })
     .then((data) => {
     console.log('New Post created:', data);
-    location.replace("http://localhost:8080/index.html");
+    location.replace("https://localhost:8080/index.html");
     })
     .catch((error) => {
     console.error('Fetch error:', error);
@@ -30,7 +30,7 @@ function searchUser() {
 }
 
 function testCookie(){
-    fetch('http://localhost:3000/test_cookie', {
+    fetch('https://localhost:3000/test_cookie', {
     method : 'GET',
     mode : 'cors',
     credentials: 'include',

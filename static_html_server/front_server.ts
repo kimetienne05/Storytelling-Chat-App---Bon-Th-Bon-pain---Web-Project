@@ -33,4 +33,8 @@ if (Deno.args.length >= 3) {
 }
 
 console.log(`Oak static server running on port ${options.port} for the files in ${ROOT}`);
-await app.listen(options);
+await app.listen({
+    port: Number(Deno.args[0]),
+  secure: true,
+  key: await Deno.readTextFile("../key.pem"),
+  cert: await Deno.readTextFile("../cert.pem")});

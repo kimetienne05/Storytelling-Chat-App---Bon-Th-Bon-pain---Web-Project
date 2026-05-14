@@ -1,6 +1,6 @@
 const localip = window.location.hostname
 
-const ws = new WebSocket(`ws://localhost:3000/chat`);
+const ws = new WebSocket(`wss://localhost:3000/chat`);
 let send_message_button = document.getElementById("send");
 
 
