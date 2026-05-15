@@ -1,4 +1,4 @@
-function searchUser() { 
+function searchUser(isadmin) { 
     let username = document.getElementById("Nom").value
     let passwd = document.getElementById("Mdp").value
     fetch('https://localhost:3000/login', {
@@ -9,7 +9,7 @@ function searchUser() {
     'Content-type': 'application/json; charset=UTF-8',
     },
     body: JSON.stringify({
-    "name" : username, "passwd": passwd
+    "name" : username, "passwd": passwd, "isadmin": isadmin
     }),
     })
     .then((response) => {
@@ -25,9 +25,9 @@ function searchUser() {
     })
     .catch((error) => {
     console.error('Fetch error:', error);
-    });
-    
+    }); 
 }
+
 
 function testCookie(){
     fetch('https://localhost:3000/test_cookie', {

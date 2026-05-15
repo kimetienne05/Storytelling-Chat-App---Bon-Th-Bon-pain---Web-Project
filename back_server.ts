@@ -97,11 +97,12 @@ router.get("/", (ctx) => {
 
 router.post("/login", async (ctx) => {
    const body = await ctx.request.body.json();
-   const { name, passwd } = body;
+   const { name, passwd,isadmin} = body;
    console.log(body)
+   const tab = isadmin ? "Admin" : "User";
    const res = await db.execute(
-      "SELECT * FROM User WHERE username = ?", [name] 
-   );
+         `SELECT * FROM ${tab} WHERE username = ?`, [name] 
+      );
    const isUser = res.rows?.[0];
    if (!isUser) {
       ctx.response.status = 406;
