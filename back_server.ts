@@ -1,9 +1,7 @@
-
 import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts"
 import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
-import { serve } from "https://deno.land/std/http/server.ts";
 const router = new Router();
 const app = new Application();
 
@@ -18,16 +16,15 @@ const SALT_ROUNDS = 12;
 // base données pour la connexion
 
 const data = [ 
- {id : '1', nom: "baptpoulpe", password_hash : await get_hash("test"), connecte : false },
- {id : '2',nom : "emie", password_hash : await get_hash("animal"), connecte : false },
- {id : '3',nom : "aanor", password_hash : await get_hash("vache"), connecte : false },
- {id : '4',nom : "kim",password_hash : await get_hash("tunnel"), connecte : false },
+ {id : '1', nom: "baptpoulpe", password_hash : await get_hash("test")},
+ {id : '2',nom : "emie", password_hash : await get_hash("animal")},
+ {id : '3',nom : "aanor", password_hash : await get_hash("vache")},
+ {id : '4',nom : "kim",password_hash : await get_hash("tunnel")},
 ]
 
-/* test sql
+//test sql
 import mysql from "mysql";
 
-// Minimal connection config (edit as needed or use env vars)
 const connection = mysql.createConnection({
   host: Deno.env.get("MYSQL_HOST") || "localhost",
   port: Number(Deno.env.get("MYSQL_PORT") || "3306"),
@@ -48,11 +45,17 @@ connection.connect((err) => {
     } else {
       console.log("MySQL version:", results[0].version);
     }
+  });
+  //test/exemple à retirer
+   connection.query("SELECT * FROM TeaType", (err, results) => {
+    if (err) {
+      console.error("Query error:", err);
+    } else {
+      console.log("MySQL version:", results);
+    }
     connection.end();
   });
 });
-*/
-
 
 
 // foncttions
@@ -60,8 +63,8 @@ connection.connect((err) => {
 async function get_hash(password: string): Promise<string> {
  const saltRounds = 10;
  const peppered = password + PEPPER;
- const salt = await bcrypt.genSalt(saltRounds); // Generate the salt manually
- return await bcrypt.hash(peppered, salt); // Pass the salt to the hash function
+ const salt = await bcrypt.genSalt(saltRounds); 
+ return await bcrypt.hash(peppered, salt); 
 }
 
 function removeTokenByUser(user: string) {
@@ -75,12 +78,38 @@ function removeTokenByUser(user: string) {
 
 const tokens: { [key: string]: string } = {};
 
+//clé secrete
+const hexKey = Deno.env.get("SECRET");
+if (!hexKey) {
+  throw new Error("manque secretkey dans .env.");
+}
+
+function hexToBuffer(hex: string): ArrayBuffer {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes.buffer;
+}
+
+const keyData = hexToBuffer(hexKey);
+
+const secretKey = await crypto.subtle.importKey(
+  "raw",               
+  keyData,  
+  { name: "HMAC", hash: "SHA-512" }, 
+  true, 
+  ["sign", "verify"]  
+);
+/*
 const secretKey = await crypto.subtle.generateKey(
    { name: "HMAC", hash: "SHA-512" },
    true,
    ["sign", "verify"]
 );
-
+console.log (secretKey);
+*/
+console.log (secretKey);
 
 const connections: WebSocket[] = [];
 
@@ -97,12 +126,6 @@ router.post("/login", async (ctx) => {
    console.log(body)
    const isUser = data.find((u) => u.nom === name );
 
-   if (!isUser || isUser.connecte == true) {
-      console.log(" mauvais username et/ou mdp ")
-      ctx.response.status = 401;
-      ctx.response.body = { error: "Invalid username or password" };
-      return;
-   }
    const peppered = passwd + PEPPER;
    const result = await bcrypt.compare(peppered, isUser.password_hash);
    if (!result) {
@@ -111,7 +134,6 @@ router.post("/login", async (ctx) => {
       ctx.response.body = { error: "Invalid username or password" };
       return;
    }
-   isUser.connecte = true;
    const token = await create({ alg: "HS512", typ: "JWT" }, { userName: isUser.nom }, secretKey);
    
    removeTokenByUser(isUser.nom);
