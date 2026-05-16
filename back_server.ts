@@ -5,7 +5,7 @@ import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 const router = new Router();
 const app = new Application();
-
+const clients = new Set();
 // base données pour la connexion
 
 const data = [ 
@@ -131,7 +131,6 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
    ctx.throw(501);
    }
    const ws = ctx.upgrade();
-
    ws.onopen = function() {
    console.log('WebSocket connection established.');
    connections.push(ws);
@@ -145,12 +144,34 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
    console.log("Websocket closed");
    };
 
-      ws.onmessage = async (event) => {
-         console.log(`Received: ${event.data}`);
-         for(var i =0; i<connections.length; i++){
+   ws.onmessage = async (event) => {
+      console.log(`Received: ${event.data}`);
+      if (event.data === 'pr_button_click'){
+         for (let i = 0; i<connections.length; i++){
+            if (connections[i].readyState === WebSocket.OPEN){
+               connections[i].send("block_temp_for_all")
+            }
+         }
+      }if(event.data === 'join_allowed'){
+         for (let i = 0; i<connections.length; i++){
+            if (connections[i].readyState === WebSocket.OPEN){
+               connections[i].send("all_join_pr")
+            }
+         }
+      }else{
+         for(let i =0; i<connections.length; i++){
             connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`);
          }
-      };
+      }
+
+   };
+});
+
+router.post("/settings", async (ctx) => {
+   const body = await ctx.request.body.json();
+   const { nbp, prtime, rtime } = body;
+   console.log(body) 
+
 });
 
 app.use(
