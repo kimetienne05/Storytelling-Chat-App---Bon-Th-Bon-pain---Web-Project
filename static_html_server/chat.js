@@ -13,12 +13,13 @@ send_message_button.addEventListener("submit", function(event) {
  });
  
  ws.onopen = function() {
- console.log('WebSocket connection established.');
+ console.log('WebSocket chat connection established.');
  };
 
+ 
  ws.onmessage = function(event) {
- console.log(`WebSocket received message: ${event.data}.`);
-// bon c'est buggé c'est pas grave
+   console.log(`WebSocket chat received message: ${event.data}.`);
+
    if (event.data === "block_temp_for_all"){
       const start_button = document.getElementById("button_start");
       if (start_button){
@@ -26,11 +27,11 @@ send_message_button.addEventListener("submit", function(event) {
          start_button.innerText = "une partie est en préparation"
          console.log('button disabled');
       }
-   }if(event.data === "all_join_pr"){
+   }else if(event.data === "all_join_pr"){
       const join_button = document.createElement('button');
       join_button.innerText = "Rejoindre la partie";
       join_button.onclick = function() {
-         location.replace("http://localhost:8080/pr.html")
+         location.replace("http://localhost:8080/pr.html");
       };
       const chatbox = document.getElementById('chatbox');
       if (chatbox) {
@@ -50,15 +51,16 @@ send_message_button.addEventListener("submit", function(event) {
  };
 
  ws.onclose = function(event) {
- console.log('WebSocket connection closed:', event);
+ console.log('WebSocket chat connection closed:', event);
  };
 
-function start_pr() { 
+function start_pr() {
+
    // envoie au back qu'on cliquer sur le button
    if (ws.readyState === WebSocket.OPEN) {
       ws.send("pr_button_click");
+      ws.send("admin_status")
    }
-    
    setTimeout( () => {
       location.replace("http://localhost:8080/pr_settings.html");
    }, 100);

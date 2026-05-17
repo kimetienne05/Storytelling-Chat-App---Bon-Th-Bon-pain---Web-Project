@@ -30,46 +30,6 @@
             <!-- quand la partie est publié, le bouton dans le chat doit de nouveua être accessible -->
             <button onclick="go_to_game(); settings_done();">publier la partie</button>
         </div>
-
-        <!-- attente des joueurs -->
-        <div id="waiting_screen" class="pr">
-            <h1> On attends tout le monde </h1>
-            <button onclick="switch_screen('potin_making')"> start </button>
-        </div>
-
-        <!-- preparation des potins de chaque joueurs -->
-         <div id="potin_making" class="pr"> 
-            <h1> choississez vos potins</h1>
-            <p>que raconte votre potin</p>
-            <input type = "text" id="potin">
-            <button onclick="switch_screen('guess')"> prêt </button>
-         </div>
-
-         <!-- boucle de jeu -->
-          <!-- part 1 : guess -->
-         <div id="guess" class="pr"> 
-            <h1> A toi de jouer </h1>
-            <p>ce potin est il vrai ?</p>
-            <button> vrai </button>
-            <button> faux </button>
-            <p>rentrer le nom de la chipie</p>
-            <input type = "text" id="potin">
-            <button onclick="switch_screen('reveal')"> confirmer </button>
-         </div>
-        <!-- part 2 : reveal de si c'est vrai et qui a eu raison -->
-         <div id="reveal" class="pr"> 
-            <h1> A qui est ce potin </h1>
-            <p>rentrer le nom de la chipie</p>
-            <input type = "text" id="potin">
-            <button onclick="switch_screen('results')"> confirmer </button>
-         </div>
-
-        <!-- resulats partie -->
-         <div id="results" class="pr"> 
-            <h1> ET LE GAGNANT EST </h1>
-            <button > retour au chat </button> 
-            <!-- rajouter un truc qui permet de retournet au chat -->
-         </div>
         <script src = "pr_settings.js" defer></script>
     </body>
 </html>
