@@ -6,6 +6,7 @@ function go_to_game(){
       location.replace("http://localhost:8080/pr.html");
    }, 100);
 }
+
 function settings_done(){
     let nb_potin = document.getElementById("nb_potin").value
     let prep_time_game = document.getElementById("prep_time").value

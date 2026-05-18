@@ -53,14 +53,52 @@ function loop(last_screen,results){
     console.log(val_round);
     console.log(nb_round);
 
-    if(nb_round + 1 > val_round ){
+    if(nb_round > val_round ){
         val_round = val_round +1;
         round.innerText = val_round;
         console.log("new round started")
         switch_screen(last_screen);
     }
-    else if(nb_round + 1 == val_round ){
+    else if(nb_round == val_round ){
         switch_screen(results);
         console.log("switch to results")
     }
+}
+
+// add potin doit:
+    // - enregistrer le potin dans la base
+    // - vider les cases d'inputs
+    // - créer ou lier les nouveau potin à un espace particulier qui permet de voir les potins selectionné pour la game
+    // - doit permettre d'ajouter n'importe quel potin de la base de donnée
+    // - (facultatif): quand on parle d'une personne en particulier sans la nommée correctement : on n'ajoute le qualificatif dans la base 
+    // et on indique que bidule c'est en fait baptiste
+function add_potin(){
+    let title = document.getElementById("potin_titre").value
+    let story = document.getElementById("potin_contenue").value
+    fetch('http://localhost:3000/pr', {
+    method : 'POST',
+    mode : 'cors',
+    credentials: 'include',
+    headers: {
+    'Content-type': 'application/json; charset=UTF-8',
+    },
+    body: JSON.stringify({
+    "titre" : username, "post": passwd
+    }),
+    })
+    .then((response) => {
+    if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+    
+    })
+    .then((data) => {
+    console.log('New Post created:', data);
+    location.replace("http://localhost:8080/index.html");
+    })
+    .catch((error) => {
+    console.error('Fetch error:', error);
+    });
+    
 }

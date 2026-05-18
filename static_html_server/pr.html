@@ -28,10 +28,21 @@
         <!-- preparation des potins de chaque joueurs -->
          <div id="potin_making" class="pr"> 
             <h1> choississez vos potins</h1>
+            <p>rajoute autant de potin que tu veux, même s'ils ne seront pas tous vu, tu pourras les retrouver dans tes draft</p>
             <p>que raconte votre potin</p>
-            <input type = "text" id="potin">
+            <p>titre du potin</p>
+            <input type = "text" id="potin_titre">
+            <p>raconte nous</p>
+            <input type = "text" id="potin_contenue">
+            <p>vrai</p>
+            <input type="checkbox" id="potin_vrai">
+            <p>faux</p>
+            <input type="checkbox" id="potin_faux">
+            <button onclick="add_potin()">ajouter au jeu</button>
             <button onclick="switch_screen('guess')"> prêt </button>
          </div>
+
+
 
          <!-- boucle de jeu -->
           <!-- part 1 : guess -->
