@@ -77,8 +77,6 @@ function hexToBuffer(hex: string): ArrayBuffer {
 
 const keyData = hexToBuffer(hexKey);
 
-console.log(await get_hash("tunnel"));
-
 const secretKey = await crypto.subtle.importKey(
   "raw",               
   keyData,  
@@ -138,12 +136,12 @@ router.post("/refresh", async (ctx) => {
     table = (payload.isAdmin as boolean) ? "Admin" : "User";
   } catch (err) {
     ctx.response.status = 401;
-    ctx.response.body = { error: "Invalid refresh token format (must be signed JWT)" };
+    ctx.response.body = { error: "Erreur refresh token" };
     return;
   }
   if (!username || !table) {
     ctx.response.status = 401;
-    ctx.response.body = { error: "Token data missing" };
+    ctx.response.body = { error: "Pas de refresh token ou info manquante" };
     return;
   }
 
@@ -151,7 +149,7 @@ router.post("/refresh", async (ctx) => {
 
   if (!isValid) {
     ctx.response.status = 401;
-    ctx.response.body = { error: "Refresh token invalid or revoked" };
+    ctx.response.body = { error: "Refresh token invalide" };
     return;
   }
 
@@ -229,6 +227,38 @@ router.post("/login", async (ctx) => {
    ctx.response.body = { auth_token: token };
    
 });
+
+router.post("/inscription", async (ctx) => {
+   const body = await ctx.request.body.json();
+   const { name, passwd } = body;
+   console.log(body)
+   const res = await db.execute(
+      "SELECT * FROM User WHERE username = ?", [name] 
+   );
+   const isUser = res.rows?.[0];
+   if (isUser) {
+      ctx.response.status = 401;
+      ctx.response.body = { error: "Invalid username or password" };
+      console.log("existe deja ")
+      return;
+   }
+   const pass_hash = await get_hash(passwd);
+
+   await db.execute(
+   "INSERT INTO User(username, passwordHash) VALUES (?, ?)", [name, pass_hash]
+   );
+
+   const token = await create({ alg: "HS512", typ: "JWT" }, { userName: name }, secretKey);
+   
+   removeTokenByUser(name);
+   tokens[token] =name;
+   
+   ctx.response.status = 200;
+   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=3600`);
+   ctx.response.body = { auth_token: token };
+   
+});
+
 
 // Middleware to verify JWT token
 const authorizationMiddleware = async (ctx: Context, next: () => Promise<unknown>) => {
