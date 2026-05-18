@@ -12,7 +12,9 @@ if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
 
 const SALT_ROUNDS = 12;
 
-
+//pour tokens:
+export const ACCESS_TOKEN_EXPIRES_IN = 60*15; // 15 minutes in seconds
+export const REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
 
 // base données pour la connexion
 
@@ -24,8 +26,7 @@ const SALT_ROUNDS = 12;
 ]*/
 
 
-//test sql
-import mysql from "mysql";
+//sql
 
 const db = await new Client().connect({
   hostname: Deno.env.get("MYSQL_HOST") || "localhost",
@@ -39,8 +40,7 @@ const { rows: data } = await db.execute("SELECT * FROM User");
 //console.log(await db.execute("SELECT VERSION() AS version"));
 
 
-
-// foncttions
+// fonctions
 
 async function get_hash(password: string): Promise<string> {
  const saltRounds = 10;
@@ -90,10 +90,97 @@ const secretKey = await crypto.subtle.importKey(
 const connections: WebSocket[] = [];
 
 // routes 
+
 router.get("/", (ctx) => {
    ctx.response.status = 200;
    ctx.response.body = "Hello world!";
 });
+
+//refresh
+
+async function validateRefreshTokenInDb(name: string, tab: string, refreshToken: string) {
+   try{
+      const res = await db.execute(
+            `SELECT * FROM ${tab} WHERE username = ?`, [name] 
+         );
+      const user = res.rows[0];
+      if (!user || !user.refreshToken) return false;
+
+      return user.refreshToken === refreshToken;
+   }
+   catch (error ){
+      console.error("Erreur DB validation token:", error);
+      return false;
+   }
+
+}
+
+router.post("/refresh", async (ctx) => {
+  const cookieHeader = ctx.request.headers.get("cookie");
+  
+  //extraire le refresh token du cookie
+  const refreshToken = cookieHeader
+    ?.split("; ")
+    .find(row => row.startsWith("refresh_token="))
+    ?.split("=")[1];
+
+  if (!refreshToken) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Pas de  refresh token" };
+    return;
+  }
+  let username: string | null = null;
+  let table: string | null = null;
+
+  try {
+    const payload = await verify(refreshToken, secretKey);
+    username = payload.userName as string;
+    table = (payload.isAdmin as boolean) ? "Admin" : "User";
+  } catch (err) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Invalid refresh token format (must be signed JWT)" };
+    return;
+  }
+  if (!username || !table) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Token data missing" };
+    return;
+  }
+
+  const isValid = await validateRefreshTokenInDb(username, table, refreshToken);
+
+  if (!isValid) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Refresh token invalid or revoked" };
+    return;
+  }
+
+  const newAccToken = await create(
+    { alg: "HS512", typ: "JWT" }, 
+    { userName: username, isAdmin: table === "Admin", exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN }, 
+    secretKey
+  );
+
+  const newRefreshToken = await create(
+     { alg: "HS512", typ: "JWT" },
+     { userName: username, isAdmin: table === "Admin", exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN },
+     secretKey
+  );
+
+  await db.execute(`UPDATE ${table} SET refreshToken = ? WHERE username = ?`, [newRefreshToken, username]);
+
+   ctx.response.headers.set(
+   "Set-Cookie",
+   `auth_token=${newAccToken}; HttpOnly; SameSite=Strict; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}; Path=/`
+   );
+   ctx.response.headers.append(
+   "Set-Cookie",
+   `refresh_token=${newRefreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`
+   );
+  ctx.response.status = 200;
+  ctx.response.body = { auth_token: newAccToken };
+}
+);
 
 router.post("/login", async (ctx) => {
    const body = await ctx.request.body.json();
@@ -119,44 +206,26 @@ router.post("/login", async (ctx) => {
       ctx.response.body = { error: "Invalid username or password" };
       return;
    }
-   const token = await create({ alg: "HS512", typ: "JWT" }, { userName: isUser.userName }, secretKey);
+   const token = await create(
+   { alg: "HS512", typ: "JWT" },
+   { userName: isUser.userName, isAdmin: isadmin, exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN },
+   secretKey
+   );
+   const refreshToken = await create(
+    { alg: "HS512", typ: "JWT" }, 
+    { userName: isUser.userName, isAdmin: isadmin, exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN }, 
+    secretKey
+  );
+   await db.execute(
+  `UPDATE ${tab} SET refreshToken = ? WHERE username = ?`, 
+  [refreshToken, name]);
    
    removeTokenByUser(isUser.userName);
    tokens[token] =isUser.userName;
    
    ctx.response.status = 200;
-   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=3600`);
-   ctx.response.body = { auth_token: token };
-   
-});
-
-router.post("/inscription", async (ctx) => {
-   const body = await ctx.request.body.json();
-   const { name, passwd } = body;
-   console.log(body)
-   const res = await db.execute(
-      "SELECT * FROM User WHERE username = ?", [name] 
-   );
-   const isUser = res.rows?.[0];
-   if (isUser) {
-      ctx.response.status = 401;
-      ctx.response.body = { error: "Invalid username or password" };
-      console.log("existe déjà")
-      return;
-   }
-   const pass_hash = await get_hash(passwd);
-
-   await db.execute(
-   "INSERT INTO User(username, passwordHash) VALUES (?, ?)", [name, pass_hash]
-   );
-
-   const token = await create({ alg: "HS512", typ: "JWT" }, { userName: name }, secretKey);
-   
-   removeTokenByUser(name);
-   tokens[token] =name;
-   
-   ctx.response.status = 200;
-   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=3600`);
+   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=900`);
+   ctx.response.headers.append("Set-Cookie", `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`);
    ctx.response.body = { auth_token: token };
    
 });
