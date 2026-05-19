@@ -242,6 +242,7 @@ router.post("/login", async (ctx) => {
 });
 
 router.post("/inscription", async (ctx) => {
+   console.log("mais est-ce qu'on est là aussi?")
    const body = await ctx.request.body.json();
    const { name, passwd } = body;
    console.log(body)
@@ -261,15 +262,28 @@ router.post("/inscription", async (ctx) => {
    "INSERT INTO User(username, passwordHash) VALUES (?, ?)", [name, pass_hash]
    );
 
-   const token = await create({ alg: "HS512", typ: "JWT" }, { userName: name }, secretKey);
-   
+   // ligne ~163 — remplace le bloc inscription
+   const token = await create(
+   { alg: "HS512", typ: "JWT" },
+   { userName: name, isAdmin: false, exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN },
+   secretKey
+   );
+   const refreshToken = await create(
+   { alg: "HS512", typ: "JWT" },
+   { userName: name, isAdmin: false, exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN },
+   secretKey
+   );
+   await db.execute(
+   "UPDATE User SET refreshToken = ? WHERE username = ?",
+   [refreshToken, name]
+   );
    removeTokenByUser(name);
-   tokens[token] =name;
-   
+   tokens[token] = name;
    ctx.response.status = 200;
-   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=3600`);
+   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}; Path=/`);
+   ctx.response.headers.append("Set-Cookie", `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`);
    ctx.response.body = { auth_token: token };
-   
+      
 });
 
 
@@ -460,10 +474,12 @@ app.use(
       credentials: true, // Allow credentials like cookies
    })
 );
-console.log(`Oak back server running on port ${Deno.args[0]}`);
 
 app.use(router.routes());
 app.use(router.allowedMethods())
+
+console.log(`Oak back server running on port ${Deno.args[0]}`);
+
 await app.listen({
   port: Number(Deno.args[0]),
   secure: true,
