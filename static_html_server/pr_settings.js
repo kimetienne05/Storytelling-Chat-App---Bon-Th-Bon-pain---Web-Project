@@ -3,7 +3,7 @@ const ws_chat = new WebSocket(`ws://localhost:3000/chat`);
 
 function go_to_game(){
    setTimeout( () => {
-      location.replace("http://localhost:8080/pr.html");
+      location.replace("https://localhost:8080/pr.html");
    }, 100);
 }
 
@@ -12,7 +12,7 @@ function settings_done(){
     let prep_time_game = document.getElementById("prep_time").value
     let round_time = document.getElementById("round_time").value
 
-    fetch('http://localhost:3000/settings', {
+    fetch('https://localhost:3000/settings', {
     method : 'POST',
     mode : 'cors',
     credentials: 'include',

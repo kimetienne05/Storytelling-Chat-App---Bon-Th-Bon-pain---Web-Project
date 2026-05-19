@@ -1,8 +1,9 @@
-import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts"
+import { Application, Router, Context } from "https://deno.land/x/oak@v17.1.6/mod.ts"
 import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { Client } from "https://deno.land/x/mysql@v2.12.1/mod.ts";
+
 const router = new Router();
 const app = new Application();
 const clients = new Set();
@@ -16,28 +17,6 @@ const SALT_ROUNDS = 12;
 //pour tokens:
 export const ACCESS_TOKEN_EXPIRES_IN = 60*15; // 15 minutes in seconds
 export const REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
-
-// base données pour la connexion
-
-// const data = [ 
-//  {id : '1', nom: "baptpoulpe", password_hash : await get_hash("test"), connecte : false, game_admin : false },
-//  {id : '2',nom : "emie", password_hash : await get_hash("animal"), connecte : false, game_admin : false },
-//  {id : '3',nom : "aanor", password_hash : await get_hash("vache"), connecte : false, game_admin : false },
-//  {id : '4',nom : "kim",password_hash : await get_hash("tunnel"), connecte : false, game_admin : false },
-// ]
-
-const pr_settings =[{nbp: '5', prtime: '30', rtime :'30'}]
-let current_pr_settings ={pr_settings};
-
-export const les_potins: any[] = [];
-// foncttions
-/*
- {id : '1', name: "baptpoulpe", passwordHash : await get_hash("test")},
- {id : '2',name : "emie", passwordHash : await get_hash("animal")},
- {id : '3',name : "aanor", passwordHash : await get_hash("vache")},
- {id : '4',name : "kim",passwordHash : await get_hash("tunnel")},
-]*/
-
 
 //sql
 
@@ -242,7 +221,6 @@ router.post("/login", async (ctx) => {
 });
 
 router.post("/inscription", async (ctx) => {
-   console.log("mais est-ce qu'on est là aussi?")
    const body = await ctx.request.body.json();
    const { name, passwd } = body;
    console.log(body)
@@ -386,44 +364,13 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
 router.post("/settings", async (ctx) => {
    const body = await ctx.request.body.json();
    const { nbp, prtime, rtime } = body;
-   current_pr_settings = body;
-   console.log(current_pr_settings);
+   // current_pr_settings = body;
+   // console.log(current_pr_settings);
    ctx.response.status = 200;
 });
 
-// router.post("/", async (ctx) => {
-//    const body = await ctx.request.body.json();
-//    const { name, passwd } = body;
-//    console.log(body)
-//    const isUser = data.find((u) => u.nom === name );
 
-//    if (!isUser || isUser.connecte == true) {
-//       console.log(" mauvais username et/ou mdp ")
-//       ctx.response.status = 401;
-//       ctx.response.body = { error: "Invalid username or password" };
-//       return;
-//    }
-
-//    const result = await bcrypt.compare(passwd, isUser.password_hash);
-//    if (!result) {
-//       console.log(" mauvais username et/ou mdp ")
-//       ctx.response.status = 401;
-//       ctx.response.body = { error: "Invalid username or password" };
-//       return;
-//    }
-//    isUser.connecte = true;
-//    const token = await create({ alg: "HS512", typ: "JWT" }, { userName: isUser.nom }, secretKey);
-   
-//    removeTokenByUser(isUser.nom);
-//    tokens[token] =isUser.nom;
-   
-//    ctx.response.status = 200;
-//    ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=3600`);
-//    ctx.response.body = { auth_token: token };
-   
-// });
-
-router.get("/pr", authorizationMiddleware, (ctx) => {
+router.get("/pr", authorizationMiddleware, async (ctx) => {
    if (!ctx.isUpgradable) {
    ctx.throw(501);
    }
@@ -449,21 +396,45 @@ router.get("/pr", authorizationMiddleware, (ctx) => {
                connections[i].send("plus one")
             }
          }
-         const info_settings={
-            action: "current pr settings",
-            donnees:current_pr_settings
-         };
-         ws.send(JSON.stringify(info_settings));
       }
 
    };
 });
-router.post("/pr", async (ctx) => {
-   const body = await ctx.request.body.json();
-   const { titre, post, veracité } = body;
-   current_pr_settings = body;
-   console.log(current_pr_settings);
-   ctx.response.status = 200;
+
+router.post("/pr", authorizationMiddleware, async (ctx) => {
+   try{
+      const body = await ctx.request.body.json();
+      const {title, content, truthValue} = body;
+      const current_username = ctx.state.tokenData.userName;
+      const userRes = await db.execute(
+               "SELECT idUser FROM User WHERE username = ?", [current_username]
+      );
+      const user = userRes.rows?.[0];
+
+      if (!user) {
+         ctx.response.status = 404;
+         ctx.response.body = { error: "Utilisateur introuvable" };
+         return;
+      }
+
+      const userId = user.id !==undefined ? user.id:user[0]; 
+
+      await db.execute(
+         "INSERT INTO PotinsPartie(title, content, truthValue, id_user) VALUES (?, ?, ?, ?)",
+         [title, content, truthValue,userId]
+      );
+
+      console.log(`Nouveau potin ajouté par ${current_username}`);
+
+      
+      ctx.response.status = 201;
+      ctx.response.body = { message: "Potin enregistré avec succès !" };
+
+   }catch (error) {
+      console.error("Erreur lors de l'ajout du potin :", error);
+      ctx.response.status = 500;
+      ctx.response.body = { error: "Erreur interne du serveur" };  
+   }
 });
 
 app.use(

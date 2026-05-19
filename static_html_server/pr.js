@@ -1,5 +1,3 @@
-import { cachedDataVersionTag } from "node:v8";
-import { les_potins } from "../back_server.ts";
 
 const ws = new WebSocket(`ws://localhost:3000/pr`);
 
@@ -76,6 +74,7 @@ function loop(last_screen,results){
     // - (facultatif): quand on parle d'une personne en particulier sans la nommée correctement : on n'ajoute le qualificatif dans la base 
     // et on indique que bidule c'est en fait baptiste
 function add_potin(){
+    // recupérationdes variables
     let title = document.getElementById("potin_titre").value
     let story = document.getElementById("potin_contenue").value
     let vrai = false;
@@ -83,17 +82,22 @@ function add_potin(){
         vrai = true;
     }
 
-    const new_potin = {
-        action: "ajout potin",
-        donnees:{
-            id : les_potins.length + 1,
-            title : title,
-            content : story,
-            truth_value: vrai,
-            author: cacaprout,
-        }
-    }
-    ws.send(new_potin)
+    fetch('https://localhost:3000/pr', {
+    method : 'POST',
+    mode : 'cors',
+    credentials: 'include',
+    headers: {
+    'Content-type': 'application/json; charset=UTF-8',
+    },
+    body: JSON.stringify({
+    "title" : title, "content": story, "truthValue": vrai
+    }),
+    })
+    .catch((error) => {
+    console.error('Fetch error:', error);
+    alert("ajout potin échoué!");
+    });
+
     // on remet à blanc
     document.getElementById("potin_titre").value=""
     document.getElementById("potin_contenue").value=""

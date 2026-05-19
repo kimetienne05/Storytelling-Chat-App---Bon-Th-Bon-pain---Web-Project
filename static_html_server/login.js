@@ -51,7 +51,6 @@ function testCookie(){
 
 
 function inscription(){
-    console.log("on est là la famille svp");
     let username = document.getElementById("Nom").value
     let passwd = document.getElementById("Mdp").value
     fetch('https://localhost:3000/inscription', {
