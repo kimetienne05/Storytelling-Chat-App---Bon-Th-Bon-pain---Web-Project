@@ -17,6 +17,8 @@ const data = [
 
 const pr_settings =[{nbp: '5', prtime: '30', rtime :'30'}]
 let current_pr_settings ={pr_settings};
+
+export const les_potins: any[] = [];
 // foncttions
 
 async function get_hash(password: string): Promise<string> {
@@ -122,6 +124,7 @@ if (Deno.args.length < 1) {
 const options = {port: Deno.args[0]}
 
 if (Deno.args.length >= 3) {
+
    options.secure = true;
    options.cert = await Deno.readTextFile(Deno.args[1]);
    options.key = await Deno.readTextFile(Deno.args[2]);
@@ -179,42 +182,6 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
    };
 });
 
-router.get("/pr", authorizationMiddleware, (ctx) => {
-   if (!ctx.isUpgradable) {
-   ctx.throw(501);
-   }
-   const ws = ctx.upgrade();
-   ws.onopen = function() {
-   console.log('WebSocket connection established.');
-   connections.push(ws);
-   };
-
-   ws.onerror = (error) => {
-   console.log(`Error: ${error}`);
-   };
-
-   ws.onclose = () => {
-   console.log("Websocket closed");
-   };
-
-   ws.onmessage = async (event) => {
-      console.log(`Received: ${event.data}`);
-      if (event.data === 'add_new_player'){
-         for (let i = 0; i<connections.length; i++){
-            if (connections[i].readyState === WebSocket.OPEN){
-               connections[i].send("plus one")
-            }
-         }
-         const info_settings={
-            action: "current pr settings",
-            donnees:current_pr_settings
-         };
-         ws.send(JSON.stringify(info_settings));
-      }
-
-   };
-});
-
 router.post("/settings", async (ctx) => {
    const body = await ctx.request.body.json();
    const { nbp, prtime, rtime } = body;
@@ -255,7 +222,48 @@ router.post("/", async (ctx) => {
    
 });
 
+router.get("/pr", authorizationMiddleware, (ctx) => {
+   if (!ctx.isUpgradable) {
+   ctx.throw(501);
+   }
+   const ws = ctx.upgrade();
+   ws.onopen = function() {
+   console.log('WebSocket connection established.');
+   connections.push(ws);
+   };
 
+   ws.onerror = (error) => {
+   console.log(`Error: ${error}`);
+   };
+
+   ws.onclose = () => {
+   console.log("Websocket closed");
+   };
+
+   ws.onmessage = async (event) => {
+      console.log(`Received: ${event.data}`);
+      if (event.data === 'add_new_player'){
+         for (let i = 0; i<connections.length; i++){
+            if (connections[i].readyState === WebSocket.OPEN){
+               connections[i].send("plus one")
+            }
+         }
+         const info_settings={
+            action: "current pr settings",
+            donnees:current_pr_settings
+         };
+         ws.send(JSON.stringify(info_settings));
+      }
+
+   };
+});
+router.post("/pr", async (ctx) => {
+   const body = await ctx.request.body.json();
+   const { titre, post, veracité } = body;
+   current_pr_settings = body;
+   console.log(current_pr_settings);
+   ctx.response.status = 200;
+});
 
 app.use(
    oakCors({

@@ -1,3 +1,6 @@
+import { cachedDataVersionTag } from "node:v8";
+import { les_potins } from "../back_server.ts";
+
 const ws = new WebSocket(`ws://localhost:3000/pr`);
 
 let nb_round = 0;
@@ -75,30 +78,25 @@ function loop(last_screen,results){
 function add_potin(){
     let title = document.getElementById("potin_titre").value
     let story = document.getElementById("potin_contenue").value
-    fetch('http://localhost:3000/pr', {
-    method : 'POST',
-    mode : 'cors',
-    credentials: 'include',
-    headers: {
-    'Content-type': 'application/json; charset=UTF-8',
-    },
-    body: JSON.stringify({
-    "titre" : username, "post": passwd
-    }),
-    })
-    .then((response) => {
-    if (!response.ok) {
-    throw new Error(`HTTP error! Status: ${response.status}`);
+    let vrai = false;
+    if (document.getElementById("potin_vrai").checked){
+        vrai = true;
     }
-    return response.json();
-    
-    })
-    .then((data) => {
-    console.log('New Post created:', data);
-    location.replace("http://localhost:8080/index.html");
-    })
-    .catch((error) => {
-    console.error('Fetch error:', error);
-    });
-    
+
+    const new_potin = {
+        action: "ajout potin",
+        donnees:{
+            id : les_potins.length + 1,
+            title : title,
+            content : story,
+            truth_value: vrai,
+            author: cacaprout,
+        }
+    }
+    ws.send(new_potin)
+    // on remet à blanc
+    document.getElementById("potin_titre").value=""
+    document.getElementById("potin_contenue").value=""
+    document.getElementById("potin_vrai").checked=false
+    document.getElementById("potin_faux").checked=false
 }
