@@ -3,6 +3,7 @@ import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { Client } from "https://deno.land/x/mysql@v2.12.1/mod.ts";
+import { resolve } from "node:path";
 
 const router = new Router();
 const app = new Application();
@@ -354,7 +355,7 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
       } */
       else{
          for(let i =0; i<connections.length; i++){
-            connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`);
+            connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`)
          }
       }
 
@@ -407,9 +408,11 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
       const {title, content, truthValue} = body;
       const current_username = ctx.state.tokenData.userName;
       const userRes = await db.execute(
-               "SELECT idUser FROM User WHERE username = ?", [current_username]
+               "SELECT idUser FROM User WHERE userName = ?", [current_username]
       );
       const user = userRes.rows?.[0];
+      console.log("premier",userRes);
+      console.log("deuxieme",user);
 
       if (!user) {
          ctx.response.status = 404;
@@ -417,7 +420,8 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
          return;
       }
 
-      const userId = user.id !==undefined ? user.id:user[0]; 
+      const userId = user.idUser !==undefined ? user.idUser:user[0]; 
+      console.log("troisieme",userId)
 
       await db.execute(
          "INSERT INTO PotinsPartie(title, content, truthValue, id_user) VALUES (?, ?, ?, ?)",
@@ -429,13 +433,33 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
       
       ctx.response.status = 201;
       ctx.response.body = { message: "Potin enregistré avec succès !" };
+      // on récupère la liste de tout les potins de la partie 
 
    }catch (error) {
       console.error("Erreur lors de l'ajout du potin :", error);
       ctx.response.status = 500;
       ctx.response.body = { error: "Erreur interne du serveur" };  
    }
+
 });
+
+router.get("/gestion_potin", authorizationMiddleware, async (ctx) =>{
+   try{
+      const all_potin = await db.execute(
+      "SELECT p.*, u.userName FROM PotinsPartie p JOIN User u ON p.id_user = u.idUser"
+      );
+      const rowsArray = Array.isArray(all_potin.rows) ? all_potin.rows : Object.values(all_potin.rows || {});
+      ctx.response.status = 200;
+      ctx.response.body = all_potin.rows;
+
+      console.log("table des potins envoyée (${rowsArray.length} lignes).")
+   }catch(error){
+      console.error("Erreur lors de l'envoie du potin :", error);
+      ctx.response.status = 500;
+      ctx.response.body = { error: "Erreur interne du serveur" }; 
+   }
+});
+
 
 app.use(
    oakCors({

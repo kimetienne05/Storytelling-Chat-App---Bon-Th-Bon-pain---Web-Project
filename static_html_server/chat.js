@@ -42,10 +42,32 @@ async function connectWebSocket (){
   };
 
   ws.onmessage = function(event) {
-  console.log(`WebSocket received message: ${event.data}.`);
-  const message = document.createElement('div');
+    console.log(`WebSocket received message: ${event.data}.`);
+
+    if (event.data === "block_temp_for_all"){
+      const start_button = document.getElementById("button_start");
+      if (start_button){
+          start_button.disabled = true;
+          start_button.innerText = "une partie est en préparation"
+          console.log('button disabled');
+      }
+    }if(event.data === "all_join_pr"){
+      const join_button = document.createElement('button');
+      join_button.innerText = "Rejoindre la partie";
+      join_button.onclick = function() {
+         location.replace("https://localhost:8080/pr.html");
+      };      
+      const chatbox = document.getElementById('chatbox');
+      if (chatbox) {
+         chatbox.appendChild(join_button);
+         console.log("bouton de join créer");
+      }
+    }else {
+      const message = document.createElement('div');
       message.textContent = event.data;
       document.getElementById('chatbox').appendChild(message);
+    }
+
 
   };
 

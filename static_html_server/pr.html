@@ -39,7 +39,7 @@
             <p>faux</p>
             <input type="checkbox" id="potin_faux">
             <button onclick="add_potin()">ajouter au jeu</button>
-            <button onclick="switch_screen('guess')"> prêt </button>
+            <button onclick="ready();"> prêt </button>
          </div>
 
 
@@ -48,9 +48,8 @@
           <!-- part 1 : guess -->
          <div id="guess" class="pr"> 
             <h1> A toi de jouer </h1>
-            <p> Round <var id ="current_round">1</var> </p>
-            <button> vrai </button>
-            <button> faux </button>
+            <p> découvrir le potin : <var id ="titre_guess"></var></p>
+            <button> vrai </button> <button> faux </button>
             <p>rentrer le nom de la chipie</p>
             <input type = "text" id="potin">
             <button onclick="switch_screen('reveal')"> confirmer </button>

@@ -1,37 +1,44 @@
 
-const ws = new WebSocket(`ws://localhost:3000/pr`);
+const ws = new WebSocket(`wss://localhost:3000/pr`);
 
 let nb_round = 0;
 let prep_time_limit = 0;
 let round_time_limit = 0; 
-
+let round_actuel = 1;
 ws.onopen = function (){
     console.log("new player joined");
     ws.send("add_new_player");
 }
 ws.onmessage = function(event){
-
-    console.log(`WebSocket received message: ${event.data}.`);
-
     if (event.data == "plus one"){
         const player = document.getElementById("player_connected");
         if (player){
-            let players = parseInt(player.innerText,10);
+            let players = parseInt(player.innerText, 10);
             players = players + 1;
             player.innerText = players;
-            console.log("player was added")
-        }     
+        }
+        return; 
     }
-    const settings_from_back = JSON.parse(event.data);
-    if (settings_from_back.action == "current pr settings"){
-        nb_round = settings_from_back.donnees.nbp;
-        console.log("val nb round recup", nb_round);
-        prep_time_limit = settings_from_back.donnees.prtime;
-        round_time_limit = settings_from_back.donnees.rtime;
 
-        console.log("maj var global")
+    try {
+        const settings_from_back = JSON.parse(event.data);
+        if (settings_from_back.action == "current pr settings"){
+            nb_round = settings_from_back.donnees.nbp;
+            prep_time_limit = settings_from_back.donnees.prtime;
+            round_time_limit = settings_from_back.donnees.rtime;
+        }
+    } catch {
+        console.warn("Message non-JSON reçu :", event.data);
     }
 }
+
+async function ready(){
+    await recup_potin();
+    const round = document.getElementById("current_round");
+    if (round) round.innerText = round_actuel;
+    switch_screen('guess');
+}
+
 function switch_screen(next_screen){
     const game_screens = document.querySelectorAll('.pr');
     
@@ -45,24 +52,31 @@ function switch_screen(next_screen){
         console.log('switch successfull');
     }
 
+    if(next_screen === 'guess'){
+        display_potin();
+    }
 }
 
 function loop(last_screen,results){
-    let round = document.getElementById("current_round")
-    let val_round = parseInt(round.innerText,10);
 
-    console.log(val_round);
-    console.log(nb_round);
+    console.log("Round actuel :", round_actuel);
+    console.log("Total des rounds prévus (nb_round) :", nb_round);
 
-    if(nb_round > val_round ){
-        val_round = val_round +1;
-        round.innerText = val_round;
-        console.log("new round started")
+   
+    const maxRounds = parseInt(nb_round, 10) || 3; // conversion en entier parce que ça bug 
+
+    if (round_actuel < maxRounds) {
+        round_actuel++;
+        
+        const roundDoc = document.getElementById("current_round");
+        if (roundDoc) roundDoc.innerText = round_actuel;
+        
+        console.log("Passage au round suivant :", round_actuel);
+        display_potin(); 
         switch_screen(last_screen);
-    }
-    else if(nb_round == val_round ){
+    } else {
+        console.log("Fin du jeu ! Passage aux résultats.");
         switch_screen(results);
-        console.log("switch to results")
     }
 }
 
@@ -103,4 +117,54 @@ function add_potin(){
     document.getElementById("potin_contenue").value=""
     document.getElementById("potin_vrai").checked=false
     document.getElementById("potin_faux").checked=false
+}
+
+let liste_potin = []
+let liste_potin_restant =[]
+
+async function recup_potin() {
+    try {
+        // Changement de méthode vers GET pour correspondre au Back
+        const response = await fetch('https://localhost:3000/gestion_potin', {
+            method: 'GET', 
+            mode: 'cors',
+            credentials: 'include',
+        });
+
+        console.log("Status reçu :", response.status);
+
+        if (!response.ok) {
+
+            const err = await response.json();
+            console.error("Erreur du serveur :", err.error);
+            return;
+        }
+        liste_potin = await response.json();  
+
+        console.log("Type de données reçues :", typeof liste_potin, "Est-ce un tableau ?", Array.isArray(liste_potin));
+        console.log("Contenu brut reçu du serveur :", liste_potin);
+
+        liste_potin_restant = [...liste_potin];
+
+    } catch (error) {
+        console.error("Erreur réseau ou parsing lors de recup_potin :", error);
+    }
+}
+
+function draw_potin(){
+    console.log("taille actuelle",liste_potin_restant.length);
+    if (liste_potin_restant.length == 0){
+        alert("la partie devrait être fini");
+        return null
+    }
+    const i = Math.floor(Math.random()*liste_potin_restant.length);
+    const potin_extrait = liste_potin_restant.splice(i,1)[0];
+    console.log("taille post draw",liste_potin_restant.length);
+    return potin_extrait;
+}
+
+function display_potin(){
+    const title_potin = document.getElementById("titre_guess");
+    title_potin.innerText = draw_potin().title; 
+    
 }
