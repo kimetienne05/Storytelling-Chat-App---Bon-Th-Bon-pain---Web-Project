@@ -34,7 +34,7 @@ const db = await new Client().connect({
   username: Deno.env.get("MYSQL_USER") || "root",
   password: Deno.env.get("MYSQL_PASSWORD") || "",
   db: Deno.env.get("MYSQL_DATABASE") || "test",
-});
+}); 
 
 const { rows: data } = await db.execute("SELECT * FROM User");
 //console.log(await db.execute("SELECT VERSION() AS version"));
@@ -337,6 +337,6 @@ app.use(router.allowedMethods())
 await app.listen({
   port: Number(Deno.args[0]),
   secure: true,
-  key: await Deno.readTextFile("../key.pem"),
-  cert: await Deno.readTextFile("../cert.pem"),
+  key: await Deno.readTextFile("./key.pem"),
+  cert: await Deno.readTextFile("./cert.pem"),
 });
