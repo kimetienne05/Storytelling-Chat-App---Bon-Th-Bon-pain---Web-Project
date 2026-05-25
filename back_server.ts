@@ -250,18 +250,18 @@ router.post("/inscription", async (ctx) => {
    secretKey
    );
    const refreshToken = await create(
-   { alg: "HS512", typ: "JWT" },
-   { userName: name, isAdmin: false, exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN },
-   secretKey
-   );
+    { alg: "HS512", typ: "JWT" }, 
+    { userName: name, isAdmin: false, exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN }, 
+    secretKey
+  );
    await db.execute(
-   "UPDATE User SET refreshToken = ? WHERE username = ?",
-   [refreshToken, name]
-   );
+  `UPDATE User SET refreshToken = ? WHERE username = ?`, 
+  [refreshToken, name]);
+   
    removeTokenByUser(name);
    tokens[token] = name;
    ctx.response.status = 200;
-   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}; Path=/`);
+   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=900`);
    ctx.response.headers.append("Set-Cookie", `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`);
    ctx.response.body = { auth_token: token };
       
