@@ -5,6 +5,7 @@ let nb_round = 0;
 let prep_time_limit = 0;
 let round_time_limit = 0; 
 let round_actuel = 1;
+let jeSuisAdminPartie = false; 
 ws.onopen = function (){
     console.log("new player joined");
     ws.send("add_new_player");
@@ -21,21 +22,73 @@ ws.onmessage = function(event){
     }
 
     try {
-        const settings_from_back = JSON.parse(event.data);
-        if (settings_from_back.action == "current pr settings"){
-            nb_round = settings_from_back.donnees.nbp;
-            prep_time_limit = settings_from_back.donnees.prtime;
-            round_time_limit = settings_from_back.donnees.rtime;
+        const settings_from_back = JSON.parse(event.data); 
+        
+        if (settings_from_back.action == "current pr settings") { 
+            nb_round = settings_from_back.donnees.nbp; 
+            prep_time_limit = settings_from_back.donnees.prtime; 
+            round_time_limit = settings_from_back.donnees.rtime; 
+            
+            jeSuisAdminPartie = settings_from_back.isAdminPartie;
+            console.log("Suis-je l'Admin de cette partie ? :", jeSuisAdminPartie);
+            
+            gererAffichageBoutonsAdmin();
+        }
+        
+        if (settings_from_back.action === "show_potin") { 
+            document.getElementById("titre_guess").innerText = settings_from_back.potin.title; 
+            document.getElementById("content_guess").innerText = settings_from_back.potin.content; 
+            
+           
+            const auteurDoc = document.getElementById("auteur_potin");
+            if (auteurDoc) {
+                auteurDoc.innerText = settings_from_back.potin.UserName || "Quelqu'un";
+            }
+        }
+
+        if (settings_from_back.action === "change_screen") {
+            switch_screen(settings_from_back.screen);
+        }
+        if (settings_from_back.action === "get_old_tea"){
+            const conteneur = document.getElementById("liste_thes_container");
+            
+            if (settings_from_back.donnees.length === 0){
+                console.log("pas de potin")
+                return;
+            }
+
+            settings_from_back.donnees.forEach(the =>{
+                const carte = document.createElement("div");;
+                carte.className = "carte-the";
+
+                carte.innerHTML = `
+                    <h3>${the.title || "Titre inconnu"}</h3>
+                    <p><strong>Contenu :</strong> ${the.textContent || the.content || "Aucun contenu"}</p>
+                    <small>Balancé par : <span style="color: red;">${the.UserName || the.username || "Anonyme"}</span></small>
+                    <hr style="border: 0.5px dashed #ccc; margin-top: 10px;">
+                `;
+                conteneur.appendChild(carte);
+                // créer un bouton qui l'ajoute à la base de donnée
+            });
         }
     } catch {
         console.warn("Message non-JSON reçu :", event.data);
     }
 }
 
-async function ready(){
-    await recup_potin();
+function gererAffichageBoutonsAdmin() {
+    const btnConfirmReveal = document.getElementById("btn_confirm_reveal");
+    if (btnConfirmReveal) {
+        btnConfirmReveal.style.display = jeSuisAdminPartie ? "inline-block" : "none";
+    }
+}
+
+async function ready() {
     const round = document.getElementById("current_round");
-    if (round) round.innerText = round_actuel;
+    if (round){round.innerText = round_actuel;} 
+    if (jeSuisAdminPartie) {
+        ws.send("next_potin");
+    }
     switch_screen('guess');
 }
 
@@ -52,8 +105,8 @@ function switch_screen(next_screen){
         console.log('switch successfull');
     }
 
-    if(next_screen === 'guess'){
-        display_potin();
+    if(next_screen === 'potin_making'){
+        ws.send("send_me_old_tea");
     }
 }
 
@@ -61,7 +114,6 @@ function loop(last_screen,results){
 
     console.log("Round actuel :", round_actuel);
     console.log("Total des rounds prévus (nb_round) :", nb_round);
-
    
     const maxRounds = parseInt(nb_round, 10) || 3; // conversion en entier parce que ça bug 
 
@@ -69,20 +121,24 @@ function loop(last_screen,results){
         round_actuel++;
         
         const roundDoc = document.getElementById("current_round");
-        if (roundDoc) roundDoc.innerText = round_actuel;
+        if (roundDoc){roundDoc.innerText = round_actuel;} 
         
         console.log("Passage au round suivant :", round_actuel);
         display_potin(); 
         switch_screen(last_screen);
+        if (jeSuisAdminPartie) {
+            ws.send("next_potin"); // On demande au serveur de piocher le prochain potin pour TOUT LE MONDE
+            ws.send("trigger_next_round_screen"); // On demande au serveur de faire basculer tout le monde sur 'guess'
+        }
     } else {
         console.log("Fin du jeu ! Passage aux résultats.");
         switch_screen(results);
     }
 }
 
-// add potin doit:
-    // - enregistrer le potin dans la base
-    // - vider les cases d'inputs
+//  la boucle de jeu doit:
+    // - enregistrer le potin dans la base (good)
+    // - vider les cases d'inputs (good)
     // - créer ou lier les nouveau potin à un espace particulier qui permet de voir les potins selectionné pour la game
     // - doit permettre d'ajouter n'importe quel potin de la base de donnée
     // - (facultatif): quand on parle d'une personne en particulier sans la nommée correctement : on n'ajoute le qualificatif dans la base 
@@ -119,52 +175,6 @@ function add_potin(){
     document.getElementById("potin_faux").checked=false
 }
 
-let liste_potin = []
-let liste_potin_restant =[]
-
-async function recup_potin() {
-    try {
-        // Changement de méthode vers GET pour correspondre au Back
-        const response = await fetch('https://localhost:3000/gestion_potin', {
-            method: 'GET', 
-            mode: 'cors',
-            credentials: 'include',
-        });
-
-        console.log("Status reçu :", response.status);
-
-        if (!response.ok) {
-
-            const err = await response.json();
-            console.error("Erreur du serveur :", err.error);
-            return;
-        }
-        liste_potin = await response.json();  
-
-        console.log("Type de données reçues :", typeof liste_potin, "Est-ce un tableau ?", Array.isArray(liste_potin));
-        console.log("Contenu brut reçu du serveur :", liste_potin);
-
-        liste_potin_restant = [...liste_potin];
-
-    } catch (error) {
-        console.error("Erreur réseau ou parsing lors de recup_potin :", error);
-    }
-}
-
-function draw_potin(){
-    console.log("taille actuelle",liste_potin_restant.length);
-    if (liste_potin_restant.length == 0){
-        alert("la partie devrait être fini");
-        return null
-    }
-    const i = Math.floor(Math.random()*liste_potin_restant.length);
-    const potin_extrait = liste_potin_restant.splice(i,1)[0];
-    console.log("taille post draw",liste_potin_restant.length);
-    return potin_extrait;
-}
-
-function display_potin(){
-    const title_potin = document.getElementById("titre_guess");
-    title_potin.innerText = draw_potin().title; 
-    
+function display_potin() {
+    ws.send("send_me_old_tea");
 }

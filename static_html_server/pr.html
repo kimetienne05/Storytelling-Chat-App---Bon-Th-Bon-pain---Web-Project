@@ -28,6 +28,9 @@
         <!-- preparation des potins de chaque joueurs -->
          <div id="potin_making" class="pr"> 
             <h1> choississez vos potins</h1>
+            <div id="liste_thes_container">
+                <p style="color: gray;">Aucun thé affiché pour le moment. Cliquez sur le bouton.</p>
+            </div>
             <p>rajoute autant de potin que tu veux, même s'ils ne seront pas tous vu, tu pourras les retrouver dans tes draft</p>
             <p>que raconte votre potin</p>
             <p>titre du potin</p>
@@ -43,23 +46,23 @@
          </div>
 
 
-
-         <!-- boucle de jeu -->
-          <!-- part 1 : guess -->
-         <div id="guess" class="pr"> 
+        <div id="guess" class="pr"> 
             <h1> A toi de jouer </h1>
-            <p> découvrir le potin : <var id ="titre_guess"></var></p>
-            <button> vrai </button> <button> faux </button>
-            <p>rentrer le nom de la chipie</p>
-            <input type = "text" id="potin">
-            <button onclick="switch_screen('reveal')"> confirmer </button>
-         </div>
-        <!-- part 2 : reveal de si c'est vrai et qui a eu raison -->
-         <div id="reveal" class="pr"> 
-            <h1> Et c'est bidule qui a écrit le potin </h1>
-            <p> Round <var id ="current_round">1</var> </p>
-            <button onclick="loop('guess','results')"> confirmer </button>
-         </div>
+            <p> Découvrir le potin : <var id="titre_guess"></var></p> 
+            <p> Mais qu'est ce que ça raconte de beau? : <var id="content_guess"></var></p> 
+            <button> vrai </button> <button> faux </button> 
+            <p>Rentrer le nom de la chipie</p>
+            <input type="text" id="potin"> <button onclick="switch_screen('reveal')"> Confirmer mon vote </button> 
+        </div>
+
+        <div id="reveal" class="pr"> 
+            <h1> Et c'est 
+                <span id="auteur_potin" style="color: coral; font-weight: bold;">bidule</span> qui a écrit le potin </h1>
+                <p> Round <var id="current_round">1</var> </p> 
+                <button id="btn_confirm_reveal" onclick="loop('guess','results')"> Round Suivant  </button> 
+        </div>
+
+
 
         <!-- resulats partie -->
          <div id="results" class="pr"> 

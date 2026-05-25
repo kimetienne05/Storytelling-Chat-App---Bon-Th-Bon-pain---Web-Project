@@ -3,12 +3,14 @@ import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { Client } from "https://deno.land/x/mysql@v2.12.1/mod.ts";
-import { resolve } from "node:path";
+
 
 const router = new Router();
 const app = new Application();
 const clients = new Set();
-
+let current_pr_settings ={nbp: 3, prtime: 60, rtime: 30}
+let old_tea : any[]=[];
+let potin_pool: any[] = [];
 //pepper:
 const PEPPER = Deno.env.get("PASSWORD_PEPPER");
 if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
@@ -345,14 +347,7 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
                connections[i].send("all_join_pr")
             }
          }
-      }/*if(event.data === 'admin_status'){
-         const currentUserName = ctx.state.tokenData.userName;
-         const isUser = data.find((u) => u.nom === currentUserName);
-         if (isUser) {
-               isUser.game_admin = true;
-               console.log(`${currentUserName} est désormais l'admin de la partie !`);
-            }
-      } */
+      }
       else{
          for(let i =0; i<connections.length; i++){
             connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`)
@@ -365,16 +360,20 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
 router.post("/settings", async (ctx) => {
    const body = await ctx.request.body.json();
    const { nbp, prtime, rtime } = body;
-   // current_pr_settings = body;
-   // console.log(current_pr_settings);
+   current_pr_settings = { nbp, prtime, rtime };
+   console.log(current_pr_settings);
    ctx.response.status = 200;
+   const res = await db.execute("SELECT * FROM PotinsPartie");
+   potin_pool = Array.isArray(res.rows) ? [...res.rows] : Object.values(res.rows || {});
 });
 
+let adminPartieUser: string | null = null;
 
 router.get("/pr", authorizationMiddleware, async (ctx) => {
    if (!ctx.isUpgradable) {
    ctx.throw(501);
    }
+   const current_username = ctx.state.tokenData.userName;
    const ws = ctx.upgrade();
    ws.onopen = function() {
    console.log('WebSocket connection established.');
@@ -386,19 +385,94 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
    };
 
    ws.onclose = () => {
-   console.log("Websocket closed");
+      console.log(`[WS Game] ${current_username} déconnecté.`);
+      // Si l'admin quitte, on remet à null pour que le prochain devienne admin
+      if (adminPartieUser === current_username) {
+         adminPartieUser = null;
+      }
+      const index = connections.indexOf(ws);
+      if (index !== -1) connections.splice(index, 1);
    };
 
    ws.onmessage = async (event) => {
-      console.log(`Received: ${event.data}`);
-      if (event.data === 'add_new_player'){
-         for (let i = 0; i<connections.length; i++){
-            if (connections[i].readyState === WebSocket.OPEN){
-               connections[i].send("plus one")
+      console.log(`Received from ${current_username}: ${event.data}`);
+   
+      if (event.data === 'add_new_player') {
+         // Si personne n'est encore AdminPartie, le premier joueur qui rejoint le devient 
+         if (!adminPartieUser) {
+            adminPartieUser = current_username;
+            console.log(`[GAME] ${adminPartieUser} est désigné AdminPartie `);
+         }
+
+         // Envoyer une mise à jour à tout le monde pour le compteur
+         for (let i = 0; i < connections.length; i++) {
+            if (connections[i].readyState === WebSocket.OPEN) {
+               connections[i].send("plus one");
             }
+         }
+         // Renvoyer les configurations et le statut d'admin spécifique à ce joueur
+         ws.send(JSON.stringify({ 
+            action: "current pr settings", 
+            donnees: current_pr_settings,
+            isAdminPartie: (adminPartieUser === current_username) // true ou false
+         }));
+
+      }
+
+      // 2. Synchroniser le changement d'écran pour TOUT LE MONDE
+      if (event.data === "trigger_next_round_screen") {
+         // Seul l'admin de partie a le droit de pousser ce signal
+         if (current_username !== adminPartieUser) return;
+
+         const msg = JSON.stringify({ action: "change_screen", screen: "guess" });
+         for (const c of connections) {
+            if (c.readyState === WebSocket.OPEN) c.send(msg);
          }
       }
 
+      // 3. Pioche centralisée : Un seul potin est tiré du pool et envoyé à TOUS les joueurs d'un coup !
+      if (event.data === "next_potin") {
+         // Sécurité : Seul l'admin de partie peut déclencher la pioche collective
+         if (current_username !== adminPartieUser) return;
+
+         if (potin_pool.length === 0) {
+            // Plus de potins, on siffle la fin de la récré
+            const endMsg = JSON.stringify({ action: "change_screen", screen: "results" });
+            for (const c of connections) {
+               if (c.readyState === WebSocket.OPEN) c.send(endMsg);
+            }
+            return;
+         }
+
+         const i = Math.floor(Math.random() * potin_pool.length);
+         const potin = potin_pool.splice(i, 1)[0];
+         
+         // On distribue le MEME potin à TOUT LE MONDE
+         const msg = JSON.stringify({ action: "show_potin", potin });
+         for (const c of connections) {
+            if (c.readyState === WebSocket.OPEN) c.send(msg);
+         }
+      }
+      if (event.data === "send_me_old_tea"){
+
+         const posted = await db.execute(
+         "SELECT t.title, u.UserName, t.textContent FROM Tea t JOIN User u ON t.creator = u.idUser"
+         );
+
+         const teas = Array.isArray(posted.rows) ? posted.rows : Object.values(posted.rows || {});
+         // console.log("teas bruts:", teas)
+         // console.log("filtre:", teas.filter(tea => tea.UserName === current_username))
+
+         // console.log("current_username:", JSON.stringify(current_username));
+         // console.log("tea.UserName:", JSON.stringify(teas[0]?.UserName));
+         // console.log("égaux ?", teas[0]?.UserName === current_username);
+         ws.send(JSON.stringify({
+            action: "get_old_tea",
+            donnees: teas.filter(tea => tea.UserName === current_username),
+         }));
+
+         console.log("les anciens potins", old_tea)
+      }
    };
 });
 
@@ -420,12 +494,9 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
          return;
       }
 
-      const userId = user.idUser !==undefined ? user.idUser:user[0]; 
-      console.log("troisieme",userId)
-
       await db.execute(
-         "INSERT INTO PotinsPartie(title, content, truthValue, id_user) VALUES (?, ?, ?, ?)",
-         [title, content, truthValue,userId]
+         "INSERT INTO PotinsPartie(title, content, truthValue, UserName) VALUES (?, ?, ?, ?)",
+         [title, content, truthValue,current_username]
       );
 
       console.log(`Nouveau potin ajouté par ${current_username}`);
@@ -446,11 +517,11 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
 router.get("/gestion_potin", authorizationMiddleware, async (ctx) =>{
    try{
       const all_potin = await db.execute(
-      "SELECT p.*, u.userName FROM PotinsPartie p JOIN User u ON p.id_user = u.idUser"
+      "SELECT p.*, u.UserName FROM PotinsPartie p JOIN User u ON p.UserName = u.userName"
       );
       const rowsArray = Array.isArray(all_potin.rows) ? all_potin.rows : Object.values(all_potin.rows || {});
       ctx.response.status = 200;
-      ctx.response.body = all_potin.rows;
+      ctx.response.body = rowsArray;
 
       console.log("table des potins envoyée (${rowsArray.length} lignes).")
    }catch(error){
