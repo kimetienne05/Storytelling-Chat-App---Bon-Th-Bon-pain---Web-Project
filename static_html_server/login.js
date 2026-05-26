@@ -21,7 +21,7 @@ function searchUser(isadmin) {
     })
     .then((data) => {
     console.log('New Post created:', data);
-    location.replace("https://localhost:8080/index.html");
+    location.replace("https://localhost:8080/accueil.html");
     })
     .catch((error) => {
     console.error('Fetch error:', error);

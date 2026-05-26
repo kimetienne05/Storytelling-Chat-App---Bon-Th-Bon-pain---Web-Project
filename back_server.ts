@@ -259,7 +259,6 @@ router.post("/inscription", async (ctx) => {
    
 });
 
-
 // Middleware to verify JWT token
 const authorizationMiddleware = async (ctx: Context, next: () => Promise<unknown>) => {
    const cookie = ctx.request.headers.get("cookie");
@@ -289,6 +288,32 @@ const authorizationMiddleware = async (ctx: Context, next: () => Promise<unknown
    ctx.response.body = { message: 'Token verified successfully', token_data: ctx.state.tokenData };
 
 });
+
+const userMiddleware = async (ctx: Context, next: () => Promise<unknown>) => {
+   try {
+      const username = ctx.state.tokenData.userName;
+      const result = await db.execute(
+         "SELECT * FROM User WHERE userName = ?",
+         [username]
+      );
+      const user = result.rows[0];
+      if (!user) {
+         ctx.response.status = 401;
+         ctx.response.body = {
+            error: "Utilisateur introuvable"
+         };
+         return;
+      }
+      ctx.state.user = user;
+      await next();
+   } catch(error) {
+      console.log(error);
+      ctx.response.status = 500;
+      ctx.response.body = {
+         error: "Erreur serveur"
+      };
+   }
+};
 
 if (Deno.args.length < 1) {
    console.log(`Usage: $ deno run --allow-net server.ts PORT [CERT_PATH KEY_PATH]`);
@@ -321,6 +346,149 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
          }
       };
 });
+router.post("/addgroup", authorizationMiddleware, async (ctx) => {
+
+   const body = await ctx.request.body.json();
+
+   const { nom, users } = body;
+
+   // utilisateur connecté
+   const username = ctx.state.tokenData.userName;
+
+   // récupérer son id
+   const result = await db.execute(
+      "SELECT idUser FROM User WHERE userName = ?",
+      [username]
+   );
+
+   const user = result.rows[0];
+
+   // créer le groupe
+   await db.execute(
+      "INSERT INTO Groups(groupName, groupOwner) VALUES (?, ?)",
+      [nom, user.idUser]
+   );
+
+   // récupérer l'id du groupe créé
+   const groupResult = await db.execute(
+      "SELECT LAST_INSERT_ID() as id"
+   );
+
+   const groupId = groupResult.rows[0].id;
+
+   // ajouter le propriétaire
+   await db.execute(
+      "INSERT INTO UserGroup(idUser, idGroup, status) VALUES (?, ?, ?)",
+      [user.idUser, groupId, "accepted"]
+   );
+
+   // ajouter les invités
+   for(let i = 0; i < users.length; i++){
+
+      await db.execute(
+         "INSERT INTO UserGroup(idUser, idGroup, status) VALUES (?, ?, ?)",
+         [users[i], groupId, "waiting"]
+      );
+   }
+
+   ctx.response.status = 200;
+
+   ctx.response.body = {
+      message: "Groupe créé"
+   };
+});
+router.get("/groups",authorizationMiddleware,userMiddleware,async (ctx) => {
+      const user = ctx.state.user;
+      const groups = await db.execute(
+         `
+         SELECT Groups.idGroup, Groups.groupName
+         FROM UserGroup
+         JOIN Groups ON UserGroup.idGroup = Groups.idGroup
+         WHERE UserGroup.idUser = ?
+         AND UserGroup.status = 'accepted'
+         `,
+         [user.idUser]
+      );
+      ctx.response.body = groups.rows;
+   }
+);
+router.get("/users",authorizationMiddleware,userMiddleware,async (ctx) => {
+      const user = ctx.state.user;
+      const users = await db.execute(
+         `
+         SELECT idUser, userName
+         FROM User
+         WHERE userName != ?
+         `,
+         [user.userName]
+      );
+      ctx.response.body = users.rows;
+   }
+);
+
+router.get("/invitations",authorizationMiddleware,userMiddleware,async (ctx) => {
+      const user = ctx.state.user;
+      const invitations = await db.execute(
+         `
+         SELECT Groups.groupName, Groups.idGroup
+         FROM UserGroup
+         JOIN Groups ON UserGroup.idGroup = Groups.idGroup
+         WHERE UserGroup.idUser = ?
+         AND UserGroup.status = 'waiting'
+         `,
+         [user.idUser]
+      );
+      ctx.response.body = invitations.rows;
+   }
+);
+router.post("/invitation",authorizationMiddleware,userMiddleware,async (ctx) => {
+      try {
+         const body = await ctx.request.body.json();
+         const { idGroup, action } = body;
+         const user = ctx.state.user;
+
+         // ACCEPTER
+         if(action === "accept") {
+            await db.execute(
+               `
+               UPDATE UserGroup
+               SET status = 'accepted'
+               WHERE idUser = ? AND idGroup = ?
+               `,
+               [user.idUser, idGroup]
+            );
+            ctx.response.body = {
+               message: "Invitation acceptée"
+            };
+            return;
+         }
+         // REFUSER
+         if(action === "refuse") {
+            await db.execute(
+               `
+               DELETE FROM UserGroup
+               WHERE idUser = ? AND idGroup = ?
+               `,
+               [user.idUser, idGroup]
+            );
+            ctx.response.body = {
+               message: "Invitation refusée"
+            };
+            return;
+         }
+         ctx.response.status = 400;
+         ctx.response.body = {
+            error: "Action invalide"
+         };
+      } catch(error) {
+         console.log(error);
+         ctx.response.status = 500;
+         ctx.response.body = {
+            error: "Erreur serveur"
+         };
+      }
+   }
+);
 
 app.use(
    oakCors({
@@ -330,6 +498,22 @@ app.use(
       credentials: true, // Allow credentials like cookies
    })
 );
+router.post("/logout", (ctx) => {
+
+    ctx.response.headers.set(
+        "Set-Cookie",
+        "auth_token=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/"
+    );
+
+    ctx.response.headers.append(
+        "Set-Cookie",
+        "refresh_token=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/"
+    );
+
+    ctx.response.body = {
+        message: "Déconnecté"
+    };
+});
 console.log(`Oak back server running on port ${Deno.args[0]}`);
 
 app.use(router.routes());
