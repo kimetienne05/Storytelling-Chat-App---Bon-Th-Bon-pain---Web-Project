@@ -485,8 +485,6 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
                "SELECT idUser FROM User WHERE userName = ?", [current_username]
       );
       const user = userRes.rows?.[0];
-      console.log("premier",userRes);
-      console.log("deuxieme",user);
 
       if (!user) {
          ctx.response.status = 404;
@@ -497,6 +495,50 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
       await db.execute(
          "INSERT INTO PotinsPartie(title, content, truthValue, UserName) VALUES (?, ?, ?, ?)",
          [title, content, truthValue,current_username]
+      );
+      console.log(`Nouveau potin ajouté par ${current_username}`);
+
+      
+      ctx.response.status = 201;
+      ctx.response.body = { message: "Potin enregistré avec succès !" };
+      // on récupère la liste de tout les potins de la partie 
+
+   }catch (error) {
+      console.error("Erreur lors de l'ajout du potin :", error);
+      ctx.response.status = 500;
+      ctx.response.body = { error: "Erreur interne du serveur" };  
+   }
+
+});
+
+router.post("/pr_bis", authorizationMiddleware, async (ctx) => {
+   // 1. Est-ce que la requête contient bien du texte/data ?
+   const hasBody = ctx.request.hasBody;
+   console.log("La requête a-t-elle un contenu ?", hasBody); // Doit afficher: true
+
+   // 2. Quel type de contenu le front prétend envoyer ?
+   console.log("ContentType détecté par le serveur :", ctx.request.headers.get("content-type"));
+   try{
+      const body = await ctx.request.body.json();
+      console.log("body",body)
+      const {title, content} = body;
+      const current_username = ctx.state.tokenData.userName;
+      const titre = body.title;
+      const story = body.content;
+
+      const userRes = await db.execute(
+         "SELECT idUser FROM User WHERE userName = ?", [current_username]
+      );
+      const user = userRes.rows?.[0];
+
+      if (!user) {
+         ctx.response.status = 404;
+         ctx.response.body = { error: "Utilisateur introuvable" };
+         return;
+      }
+      await db.execute(
+         "INSERT INTO PotinsPartie(title, content, truthValue, UserName) VALUES (?, ?, ?, ?)",
+         [titre, story, true,current_username]
       );
 
       console.log(`Nouveau potin ajouté par ${current_username}`);
@@ -509,7 +551,7 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
    }catch (error) {
       console.error("Erreur lors de l'ajout du potin :", error);
       ctx.response.status = 500;
-      ctx.response.body = { error: "Erreur interne du serveur" };  
+      ctx.response.body = { error: "Erreur interne du serveur potin 2" };  
    }
 
 });

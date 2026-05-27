@@ -58,7 +58,7 @@ ws.onmessage = function(event){
             }
 
             settings_from_back.donnees.forEach(the =>{
-                const carte = document.createElement("div");;
+                const carte = document.createElement("div");
                 carte.className = "carte-the";
 
                 carte.innerHTML = `
@@ -68,7 +68,11 @@ ws.onmessage = function(event){
                     <hr style="border: 0.5px dashed #ccc; margin-top: 10px;">
                 `;
                 conteneur.appendChild(carte);
-                // créer un bouton qui l'ajoute à la base de donnée
+                const ajout = document.createElement("button");
+                ajout.innerText ="ajoutez ce potin à la partie"
+                ajout.addEventListener("click", () =>{add_old_tea(the);} )
+                carte.appendChild(ajout);
+
             });
         }
     } catch {
@@ -177,4 +181,28 @@ function add_potin(){
 
 function display_potin() {
     ws.send("send_me_old_tea");
+}
+
+function add_old_tea(tab){
+    try{
+        const titre = tab.title;
+        const content = tab.textContent;
+        console.log(tab);
+        fetch('https://localhost:3000/pr_bis', {
+        method : 'POST',
+        mode : 'cors',
+        credentials: 'include',
+        headers: {
+        'Content-type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify({
+        "title" : titre , "content": content
+        }),
+        });
+
+    }catch(error) {
+        console.error('Fetch error:', error);
+        alert("ajout potin échoué! kim triste");
+    }
+
 }
