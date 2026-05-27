@@ -15,6 +15,8 @@ services:
       retries: 3
     volumes:
       - pgdata:/var/lib/mysql/
+    networks:
+      - back
   back:
     build:
       context: ./back
@@ -32,6 +34,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - back
   front:
     build:
       context: ./front
@@ -42,5 +46,10 @@ services:
         condition: service_started
     ports:
       - "127.0.0.1:${PORTFRONT}"
+    networks:
+      - front
 volumes:
   pgdata:
+networks:
+  back:
+  front:
