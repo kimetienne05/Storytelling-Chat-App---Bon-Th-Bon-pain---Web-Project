@@ -76,7 +76,7 @@ async function attemptRefreshToken() {
       return true;
     } else {
       console.error("Échec du refresh, redirection login");
-      window.location.href = "/login";
+      globalThis.location.href = "/login";
       return false;
     }
   } catch (error) {
