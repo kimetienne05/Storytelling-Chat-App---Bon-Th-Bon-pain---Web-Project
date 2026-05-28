@@ -64,6 +64,5 @@ build-front:
 
 build-db:
   extends: .build
-  image: mariadb:10.11
   script:
-    - echo "test"
+    - docker pull mariadb:10.11
