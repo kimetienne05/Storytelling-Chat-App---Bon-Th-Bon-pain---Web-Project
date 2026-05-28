@@ -20,7 +20,7 @@ test:
   script:
     # Exemple concret pour Deno : mettre en cache les dépendances
     - echo "Lancement des tests..."
-    - deno test --allow-env /tests
+    - deno test --allow-env ./tests/
     - echo "Terminé !"
 
 # 3. Tests lourds avec Base de Données
