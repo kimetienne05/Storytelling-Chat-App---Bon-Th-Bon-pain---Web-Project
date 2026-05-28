@@ -1,4 +1,4 @@
-const ws = new WebSocket(`wss://localhost:3000/settings`);
+
 const ws_chat = new WebSocket(`wss://localhost:3000/chat`);
 
 function go_to_game(){

@@ -122,7 +122,7 @@ function loop(last_screen,results){
    
     const maxRounds = parseInt(nb_round, 10) || 3; // conversion en entier parce que ça bug 
 
-    if (round_actuel < maxRounds) {
+    if (round_actuel <= maxRounds) {
         round_actuel++;
         
         const roundDoc = document.getElementById("current_round");
@@ -152,14 +152,21 @@ function add_potin(){
     // recupérationdes variables
     let title = document.getElementById("potin_titre").value
     let story = document.getElementById("potin_contenue").value
-    let vrai = false;
     let dateEvenement = document.getElementById("potin_date_evenement").value;
+
+    if (!title.trim() || !story.trim()) {
+    alert("Le titre et le contenu sont obligatoires !");
+    return; // on stoppe tout
+    }
     if (dateEvenement === "") {
         dateEvenement = null; // Gère le cas où l'utilisateur ne met pas de date
     }
-    if (document.getElementById("potin_vrai").checked){
-        vrai = true;
+    if (!verite) {
+        alert("Tu dois choisir vrai ou faux !");
+        return;
     }
+
+    let vrai = verite.value === "vrai"; 
 
     fetch('https://localhost:3000/pr', {
     method : 'POST',
@@ -180,8 +187,7 @@ function add_potin(){
     // on remet à blanc
     document.getElementById("potin_titre").value=""
     document.getElementById("potin_contenue").value=""
-    document.getElementById("potin_vrai").checked=false
-    document.getElementById("potin_faux").checked=false
+    document.querySelectorAll('input[name="verite"]').forEach(r => r.checked = false);
     document.getElementById("potin_date_evenement").value=""
 }
 

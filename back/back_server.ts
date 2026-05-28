@@ -29,7 +29,7 @@ const db = await new Client().connect({
   username: Deno.env.get("MYSQL_USER") || "root",
   password: Deno.env.get("MYSQL_PASSWORD") || "",
   db: Deno.env.get("MYSQL_DATABASE") || "test",
-});
+}); 
 
 const { rows: data } = await db.execute("SELECT * FROM User");
 //console.log(await db.execute("SELECT VERSION() AS version"));
@@ -491,8 +491,10 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
             console.log("potin ajouté :", recup_tab[i].title);
             }
             await db.execute("drop table PotinsPartie;");
-            await db.execute(
-               "CREATE TABLE PotinsPartie (idPotin INT AUTO_INCREMENT PRIMARY KEY,title VARCHAR(50) NOT NULL,content VARCHAR(500) NOT NULL,truthValue BOOLEAN NOT NULL,isNew BOOLEAN NOT NULL,postDate DATE,eventDate DATE,idUser INT NOT NULL,CONSTRAINT fk_potin_userFOREIGN KEY (idUser)REFERENCES `User`(idUser)ON DELETE CASCADE);")
+
+           
+            await db.execute("CREATE TABLE PotinsPartie (idPotin INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(50) NOT NULL, content VARCHAR(500) NOT NULL, truthValue BOOLEAN NOT NULL, isNew BOOLEAN NOT NULL, postDate DATE, eventDate DATE, UserName VARCHAR(30) NOT NULL, idUser INT NOT NULL, CONSTRAINT fk_potin_username FOREIGN KEY (UserName) REFERENCES `User`(userName) ON DELETE CASCADE, CONSTRAINT fk_potin_userid FOREIGN KEY (idUser) REFERENCES `User`(idUser) ON DELETE CASCADE);")
+         
          }catch(error){
             console.error(error);
          }

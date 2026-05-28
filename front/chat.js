@@ -1,4 +1,3 @@
-
 const localip = window.location.hostname
 
 let ws =null;
@@ -19,7 +18,7 @@ send_message_button.addEventListener("submit", function(event) {
 
 async function connectWebSocket (){
   //pour tester que token tjr valide
-  const testRes = await fetch(`https://${localip}:3000/test_cookie`, { credentials: 'include' });
+  const testRes = await fetch(`https://localhost:3000/test_cookie`, { credentials: 'include' });
   if (testRes.status === 401) {
     const refreshed = await attemptRefreshToken();
     if (!refreshed) return; 
@@ -31,7 +30,7 @@ async function connectWebSocket (){
     console.log('WebSocket connection established.');
     // Vérifier le token un peu après qu'il expire)
     refreshInterval = setInterval(async () => {
-      const res = await fetch(`https://${localip}:3000/test_cookie`, { credentials: 'include' });
+      const res = await fetch(`https://localhost:3000/test_cookie`, { credentials: 'include' });
       if (res.status === 401) {
         console.log("Token expiré, refresh...");
         clearInterval(refreshInterval);
@@ -91,7 +90,7 @@ async function connectWebSocket (){
 
 async function attemptRefreshToken() {
   try {
-    const response = await fetch(`https://${localip}:3000/refresh`, {
+    const response = await fetch(`https://localhost:3000/refresh`, {
       method: 'POST',
       credentials: 'include'
     });

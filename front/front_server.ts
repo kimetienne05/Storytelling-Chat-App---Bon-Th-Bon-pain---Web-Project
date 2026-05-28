@@ -4,10 +4,13 @@ import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts"
 const app = new Application();
 const ROOT = `${Deno.cwd()}/`;
 
+const STATIC_PATH = "/app/dist"; 
+
+
 app.use(async (ctx) => {
  try {
  await ctx.send({
- root: ROOT,
+ root: STATIC_PATH,
  index: "login.html",
  });
  } catch {
@@ -35,5 +38,5 @@ console.log(`Oak static server running on port ${options.port} for the files in 
 await app.listen({
     port: Number(Deno.args[0]),
   secure: true,
-  key: await Deno.readTextFile("../key.pem"),
-  cert: await Deno.readTextFile("../cert.pem")});
+  key: await Deno.readTextFile("./key.pem"),
+  cert: await Deno.readTextFile("./cert.pem")});

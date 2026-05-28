@@ -34,15 +34,15 @@
             <p>rajoute autant de potin que tu veux, même s'ils ne seront pas tous vu, tu pourras les retrouver dans tes draft</p>
             <p>que raconte votre potin</p>
             <p>titre du potin</p>
-            <input type = "text" id="potin_titre">
+            <input type = "text" id="potin_titre" placeholder="titre_obligatoire" required>
             <p>raconte nous</p>
-            <input type = "text" id="potin_contenue">
+            <input type = "text" id="potin_contenue" placeholder="contenue_obligatoire" required>
             <p>Date de l'événement (optionnel)</p>
             <input type="date" id="potin_date_evenement">
-            <p>vrai</p>
-            <input type="checkbox" id="potin_vrai">
-            <p>faux</p>
-            <input type="checkbox" id="potin_faux">
+            <input type="radio" name="verite" id="potin_vrai" value="vrai" required>
+            <label for="potin_vrai">Vrai</label>
+            <input type="radio" name="verite" id="potin_faux" value="faux">
+            <label for="potin_faux">Faux</label>
             <button onclick="add_potin()">ajouter au jeu</button>
             <button onclick="ready();"> prêt </button>
          </div>

@@ -1,7 +1,8 @@
+
 function searchUser(isadmin) { 
     let username = document.getElementById("Nom").value
     let passwd = document.getElementById("Mdp").value
-    fetch('https://localhost:3000/login', {
+    fetch(`https://localhost:3000/login`, {
     method : 'POST',
     mode : 'cors',
     credentials: 'include',
@@ -21,7 +22,7 @@ function searchUser(isadmin) {
     })
     .then((data) => {
     console.log('New Post created:', data);
-    location.replace("https://localhost:8080/index.html");
+    location.replace(`https://localhost:8080/index.html`);
     })
     .catch((error) => {
     console.error('Fetch error:', error);
@@ -30,7 +31,7 @@ function searchUser(isadmin) {
 
 
 function testCookie(){
-    fetch('https://localhost:3000/test_cookie', {
+    fetch(`https://localhost:3000/test_cookie`, {
     method : 'GET',
     mode : 'cors',
     credentials: 'include',
@@ -53,7 +54,7 @@ function testCookie(){
 function inscription(){
     let username = document.getElementById("Nom").value
     let passwd = document.getElementById("Mdp").value
-    fetch('https://localhost:3000/inscription', {
+    fetch(`https://localhost:3000/inscription`, {
     method : 'POST',
     mode : 'cors',
     credentials: 'include',
@@ -74,7 +75,7 @@ function inscription(){
     .then((data) => {
     console.log('New Post created:', data);
     alert("Inscription réussi!");
-    location.replace("https://localhost:8080/index.html");
+    location.replace(`https://localhost:8080/index.html`);
     })
     .catch((error) => {
     console.error('Fetch error:', error);

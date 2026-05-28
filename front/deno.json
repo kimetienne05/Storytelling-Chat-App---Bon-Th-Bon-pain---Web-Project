@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "mysql": "npm:mysql@^2.18.1",
+    "pg": "npm:pg@^8.20.0"
+  },
+  "tasks":{
+    "build": "mkdir -p dist && cp index.html login.html pr.html pr_settings.html style.css login.js chat.js pr.js pr_settings.js dist/",
+    "start" : "deno run --allow-net --allow-read front_server.ts 8080 "
+  }
+}
