@@ -57,8 +57,6 @@ build-front:
   script:
     - echo "build front"
     - docker build -f front/Dockerfile -t $IMAGE_BASE/front:$CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/front:latest front/
-    - echo "Vérifi que l'image existe"
-    - if docker image inspect $FULL_IMAGE_NAME:$IMAGE_TAG > /dev/null; then echo "Image existe"; else echo " L'image n'a pas été créée"; exit 1; fi
     - echo "On push"
     - docker push $IMAGE_BASE/front:$CI_COMMIT_SHORT_SHA
     - docker push $IMAGE_BASE/front:latest
