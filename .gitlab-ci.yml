@@ -32,6 +32,7 @@ build:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
   script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
     - echo "Build du commit $CI_COMMIT_SHORT_SHA sur la branche $CI_COMMIT_BRANCH"
     - docker compose up -d --build
     - sleep 15
