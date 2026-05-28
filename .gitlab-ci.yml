@@ -66,5 +66,4 @@ build-db:
   extends: .build
   script:
     - docker pull mariadb:10.11
-    - docker push $IMAGE_BASE/db:mariadb:10.11
     - docker push $IMAGE_BASE/db:latest
