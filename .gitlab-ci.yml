@@ -65,6 +65,8 @@ build-front:
 build-db:
   extends: .build
   script:
-    - docker build --pull -t $IMAGE_BASE/db:latest -t $IMAGE_BASE/db:10.11 .
+    - docker pull mariadb:10.11
+    - docker tag mariadb:10.11 $IMAGE_BASE/db:latest
+    - docker tag mariadb:10.11 $IMAGE_BASE/db:10.11
     - docker push $IMAGE_BASE/db:latest
     - docker push $IMAGE_BASE/db:10.11
