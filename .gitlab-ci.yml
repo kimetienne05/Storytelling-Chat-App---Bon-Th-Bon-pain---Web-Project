@@ -3,8 +3,8 @@ image: denoland/deno:latest
 # CORRECTION ICI : Lint doit être le tout premier stage
 stages:
   - lint
-  - build
   - test
+  - build
 
 # 1. Vérification rapide (échoue vite si le code est sale)
 lint:
@@ -15,18 +15,20 @@ lint:
     - deno fmt --check
 
 # 2. Compilation / Préparation
-build:
-  stage: build
+test:
+  stage: test
   script:
     - echo "Compilation du code..."
     # Exemple concret pour Deno : mettre en cache les dépendances
-    - deno cache src/main.ts 
+    - deno cache src/main.ts
+    - echo "Lancement des tests..."
+    - deno test --allow-all
     - echo "Terminé !"
     - echo "Build du commit $CI_COMMIT_SHORT_SHA sur la branche $CI_COMMIT_BRANCH"
 
 # 3. Tests lourds avec Base de Données
-test:
-  stage: test
+build:
+  stage: build
   services:
     - docker:dind
   variables:
@@ -34,10 +36,10 @@ test:
     DOCKER_TLS_CERTDIR: "/certs"
   script:
     - echo "Démarrage des services..."
-    - docker compose up -d
+    - docker compose up -d --build
     - sleep 15
-    - echo "Lancement des tests..."
-    - deno test --allow-all
     - echo "Nettoyage..."
+    - docker compose push
     - docker compose down -v
-    - echo "Tous les tests passent !"
+
+

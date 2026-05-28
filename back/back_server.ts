@@ -1,4 +1,4 @@
-import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts"
+import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts";
 import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
@@ -10,9 +10,8 @@ const app = new Application();
 const PEPPER = Deno.env.get("PASSWORD_PEPPER");
 if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
 
-
 //pour tokens:
-export const ACCESS_TOKEN_EXPIRES_IN = 60*15; // 15 minutes in seconds
+export const ACCESS_TOKEN_EXPIRES_IN = 60 * 15; // 15 minutes in seconds
 export const REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
 
 // base données pour la connexion
@@ -24,7 +23,6 @@ export const REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
  {id : '4',name : "kim",passwordHash : await get_hash("tunnel")},
 ]*/
 
-
 //sql
 
 const db = await new Client().connect({
@@ -33,30 +31,28 @@ const db = await new Client().connect({
   username: Deno.env.get("MYSQL_USER") || "root",
   password: Deno.env.get("MYSQL_PASSWORD") || "",
   db: Deno.env.get("MYSQL_DATABASE") || "test",
-}); 
+});
 
 //const { rows: data } = await db.execute("SELECT * FROM User");
 //console.log(await db.execute("SELECT VERSION() AS version"));
 
-
 // fonctions
 
 async function get_hash(password: string): Promise<string> {
- const saltRounds = 10;
- const peppered = password + PEPPER;
- const salt = await bcrypt.genSalt(saltRounds); 
- return await bcrypt.hash(peppered, salt); 
+  const saltRounds = 10;
+  const peppered = password + PEPPER;
+  const salt = await bcrypt.genSalt(saltRounds);
+  return await bcrypt.hash(peppered, salt);
 }
 
 function removeTokenByUser(user: string) {
-   for (const token in tokens) {
-   if (tokens[token] === user) {
-   delete tokens[token];
-   break;
-   }
-   }
+  for (const token in tokens) {
+    if (tokens[token] === user) {
+      delete tokens[token];
+      break;
+    }
+  }
 }
-
 
 const tokens: { [key: string]: string } = {};
 
@@ -77,48 +73,51 @@ function hexToBuffer(hex: string): ArrayBuffer {
 const keyData = hexToBuffer(hexKey);
 
 const secretKey = await crypto.subtle.importKey(
-  "raw",               
-  keyData,  
-  { name: "HMAC", hash: "SHA-512" }, 
-  true, 
-  ["sign", "verify"]  
+  "raw",
+  keyData,
+  { name: "HMAC", hash: "SHA-512" },
+  true,
+  ["sign", "verify"],
 );
 
 const connections: WebSocket[] = [];
 
-// routes 
+// routes
 
 router.get("/", (ctx) => {
-   ctx.response.status = 200;
-   ctx.response.body = "Hello world!";
+  ctx.response.status = 200;
+  ctx.response.body = "Hello world!";
 });
 
 //refresh
 
-async function validateRefreshTokenInDb(name: string, tab: string, refreshToken: string) {
-   try{
-      const res = await db.execute(
-            `SELECT * FROM ${tab} WHERE username = ?`, [name] 
-         );
-      const user = res.rows[0];
-      if (!user || !user.refreshToken) return false;
+async function validateRefreshTokenInDb(
+  name: string,
+  tab: string,
+  refreshToken: string,
+) {
+  try {
+    const res = await db.execute(
+      `SELECT * FROM ${tab} WHERE username = ?`,
+      [name],
+    );
+    const user = res.rows[0];
+    if (!user || !user.refreshToken) return false;
 
-      return user.refreshToken === refreshToken;
-   }
-   catch (error ){
-      console.error("Erreur DB validation token:", error);
-      return false;
-   }
-
+    return user.refreshToken === refreshToken;
+  } catch (error) {
+    console.error("Erreur DB validation token:", error);
+    return false;
+  }
 }
 
 router.post("/refresh", async (ctx) => {
   const cookieHeader = ctx.request.headers.get("cookie");
-  
+
   //extraire le refresh token du cookie
   const refreshToken = cookieHeader
     ?.split("; ")
-    .find(row => row.startsWith("refresh_token="))
+    .find((row) => row.startsWith("refresh_token="))
     ?.split("=")[1];
 
   if (!refreshToken) {
@@ -153,199 +152,247 @@ router.post("/refresh", async (ctx) => {
   }
 
   const newAccToken = await create(
-    { alg: "HS512", typ: "JWT" }, 
-    { userName: username, isAdmin: table === "Admin", exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN }, 
-    secretKey
+    { alg: "HS512", typ: "JWT" },
+    {
+      userName: username,
+      isAdmin: table === "Admin",
+      exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN,
+    },
+    secretKey,
   );
 
   const newRefreshToken = await create(
-     { alg: "HS512", typ: "JWT" },
-     { userName: username, isAdmin: table === "Admin", exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN },
-     secretKey
+    { alg: "HS512", typ: "JWT" },
+    {
+      userName: username,
+      isAdmin: table === "Admin",
+      exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN,
+    },
+    secretKey,
   );
 
-  await db.execute(`UPDATE ${table} SET refreshToken = ? WHERE username = ?`, [newRefreshToken, username]);
+  await db.execute(`UPDATE ${table} SET refreshToken = ? WHERE username = ?`, [
+    newRefreshToken,
+    username,
+  ]);
 
-   ctx.response.headers.set(
-   "Set-Cookie",
-   `auth_token=${newAccToken}; HttpOnly; SameSite=Strict; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}; Path=/`
-   );
-   ctx.response.headers.append(
-   "Set-Cookie",
-   `refresh_token=${newRefreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`
-   );
+  ctx.response.headers.set(
+    "Set-Cookie",
+    `auth_token=${newAccToken}; HttpOnly; SameSite=Strict; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}; Path=/`,
+  );
+  ctx.response.headers.append(
+    "Set-Cookie",
+    `refresh_token=${newRefreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`,
+  );
   ctx.response.status = 200;
   ctx.response.body = { auth_token: newAccToken };
-}
-);
+});
 
 router.post("/login", async (ctx) => {
-   const body = await ctx.request.body.json();
-   const { name, passwd,isadmin} = body;
-   console.log(body)
-   const tab = isadmin ? "Admin" : "User";
-   const res = await db.execute(
-         `SELECT * FROM ${tab} WHERE username = ?`, [name] 
-      );
-   const isUser = res.rows?.[0];
-   if (!isUser) {
-      ctx.response.status = 406;
-      ctx.response.body = { error: "Invalid username or password" };
-       console.log("existe pas")
-      return;
-   }
-
-   const peppered = passwd + PEPPER;
-   const result = await bcrypt.compare(peppered, isUser.passwordHash);
-   if (!result) {
-      console.log(" mauvais username et/ou mdp ")
-      ctx.response.status = 401;
-      ctx.response.body = { error: "Invalid username or password" };
-      return;
-   }
-   const token = await create(
-   { alg: "HS512", typ: "JWT" },
-   { userName: isUser.userName, isAdmin: isadmin, exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN },
-   secretKey
-   );
-   const refreshToken = await create(
-    { alg: "HS512", typ: "JWT" }, 
-    { userName: isUser.userName, isAdmin: isadmin, exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN }, 
-    secretKey
+  const body = await ctx.request.body.json();
+  const { name, passwd, isadmin } = body;
+  console.log(body);
+  const tab = isadmin ? "Admin" : "User";
+  const res = await db.execute(
+    `SELECT * FROM ${tab} WHERE username = ?`,
+    [name],
   );
-   await db.execute(
-  `UPDATE ${tab} SET refreshToken = ? WHERE username = ?`, 
-  [refreshToken, name]);
-   
-   removeTokenByUser(isUser.userName);
-   tokens[token] =isUser.userName;
-   
-   ctx.response.status = 200;
-   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=900`);
-   ctx.response.headers.append("Set-Cookie", `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`);
-   ctx.response.body = { auth_token: token };
-   
+  const isUser = res.rows?.[0];
+  if (!isUser) {
+    ctx.response.status = 406;
+    ctx.response.body = { error: "Invalid username or password" };
+    console.log("existe pas");
+    return;
+  }
+
+  const peppered = passwd + PEPPER;
+  const result = await bcrypt.compare(peppered, isUser.passwordHash);
+  if (!result) {
+    console.log(" mauvais username et/ou mdp ");
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Invalid username or password" };
+    return;
+  }
+  const token = await create(
+    { alg: "HS512", typ: "JWT" },
+    {
+      userName: isUser.userName,
+      isAdmin: isadmin,
+      exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN,
+    },
+    secretKey,
+  );
+  const refreshToken = await create(
+    { alg: "HS512", typ: "JWT" },
+    {
+      userName: isUser.userName,
+      isAdmin: isadmin,
+      exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN,
+    },
+    secretKey,
+  );
+  await db.execute(
+    `UPDATE ${tab} SET refreshToken = ? WHERE username = ?`,
+    [refreshToken, name],
+  );
+
+  removeTokenByUser(isUser.userName);
+  tokens[token] = isUser.userName;
+
+  ctx.response.status = 200;
+  ctx.response.headers.set(
+    "Set-Cookie",
+    `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=900`,
+  );
+  ctx.response.headers.append(
+    "Set-Cookie",
+    `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`,
+  );
+  ctx.response.body = { auth_token: token };
 });
 
 router.post("/inscription", async (ctx) => {
-   const body = await ctx.request.body.json();
-   const { name, passwd } = body;
-   console.log(body)
-   const res = await db.execute(
-      "SELECT * FROM User WHERE username = ?", [name] 
-   );
-   const isUser = res.rows?.[0];
-   if (isUser) {
-      ctx.response.status = 401;
-      ctx.response.body = { error: "Invalid username or password" };
-      console.log("existe deja ")
-      return;
-   }
-   const pass_hash = await get_hash(passwd);
-
-   await db.execute(
-   "INSERT INTO User(username, passwordHash) VALUES (?, ?)", [name, pass_hash]
-   );
-
-   const token = await create(
-   { alg: "HS512", typ: "JWT" },
-   { userName: name, isAdmin: false, exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN },
-   secretKey
-   );
-   const refreshToken = await create(
-    { alg: "HS512", typ: "JWT" }, 
-    { userName: name, isAdmin: false, exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN }, 
-    secretKey
+  const body = await ctx.request.body.json();
+  const { name, passwd } = body;
+  console.log(body);
+  const res = await db.execute(
+    "SELECT * FROM User WHERE username = ?",
+    [name],
   );
-   await db.execute(
-  `UPDATE User SET refreshToken = ? WHERE username = ?`, 
-  [refreshToken, name]);
-   
-   removeTokenByUser(name);
-   tokens[token] =name;
-   
-   ctx.response.status = 200;
-   ctx.response.headers.set("Set-Cookie", `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=900`);
-   ctx.response.headers.append("Set-Cookie", `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`);
-   ctx.response.body = { auth_token: token };
-   
+  const isUser = res.rows?.[0];
+  if (isUser) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Invalid username or password" };
+    console.log("existe deja ");
+    return;
+  }
+  const pass_hash = await get_hash(passwd);
+
+  await db.execute(
+    "INSERT INTO User(username, passwordHash) VALUES (?, ?)",
+    [name, pass_hash],
+  );
+
+  const token = await create(
+    { alg: "HS512", typ: "JWT" },
+    {
+      userName: name,
+      isAdmin: false,
+      exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRES_IN,
+    },
+    secretKey,
+  );
+  const refreshToken = await create(
+    { alg: "HS512", typ: "JWT" },
+    {
+      userName: name,
+      isAdmin: false,
+      exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRES_IN,
+    },
+    secretKey,
+  );
+  await db.execute(
+    `UPDATE User SET refreshToken = ? WHERE username = ?`,
+    [refreshToken, name],
+  );
+
+  removeTokenByUser(name);
+  tokens[token] = name;
+
+  ctx.response.status = 200;
+  ctx.response.headers.set(
+    "Set-Cookie",
+    `auth_token=${token}; HttpOnly; SameSite=Strict; Max-Age=900`,
+  );
+  ctx.response.headers.append(
+    "Set-Cookie",
+    `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}; Path=/`,
+  );
+  ctx.response.body = { auth_token: token };
 });
 
-
 // Middleware to verify JWT token
-const authorizationMiddleware = async (ctx: Context, next: () => Promise<unknown>) => {
-   const cookie = ctx.request.headers.get("cookie");
-   const authToken = cookie?.split("; ").find(row => row.startsWith("auth_token="))?.split('=')[1];
+const authorizationMiddleware = async (
+  ctx: Context,
+  next: () => Promise<unknown>,
+) => {
+  const cookie = ctx.request.headers.get("cookie");
+  const authToken = cookie?.split("; ").find((row) =>
+    row.startsWith("auth_token=")
+  )?.split("=")[1];
 
+  if (!authToken) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Unauthorized: Missing token" };
+    return;
+  }
 
-   if (!authToken) {
-      ctx.response.status = 401;
-      ctx.response.body = { error: "Unauthorized: Missing token" };
-      return;
-   }
+  try {
+    // Verify the token
+    const tokenData = await verify(authToken, secretKey);
+    ctx.state.tokenData = tokenData; // Store data in ctx.state for use in other middlewares/routes
 
-   try {
-      // Verify the token
-      const tokenData = await verify(authToken, secretKey);
-      ctx.state.tokenData = tokenData; // Store data in ctx.state for use in other middlewares/routes
+    await next();
+  } catch {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Unauthorized: Invalid token" };
+  }
+};
 
-      await next();
-   } catch {
-      ctx.response.status = 401;
-      ctx.response.body = { error: "Unauthorized: Invalid token" };
-   }
-   };
-
-   // the cookie is tested in the middleware (the cookie is provided by the browser in a header)
-   router.get('/test_cookie', authorizationMiddleware, (ctx) => {
-   ctx.response.body = { message: 'Token verified successfully', token_data: ctx.state.tokenData };
-
+// the cookie is tested in the middleware (the cookie is provided by the browser in a header)
+router.get("/test_cookie", authorizationMiddleware, (ctx) => {
+  ctx.response.body = {
+    message: "Token verified successfully",
+    token_data: ctx.state.tokenData,
+  };
 });
 
 if (Deno.args.length < 1) {
-   console.log(`Usage: $ deno run --allow-net server.ts PORT [CERT_PATH KEY_PATH]`);
-   Deno.exit();
+  console.log(
+    `Usage: $ deno run --allow-net server.ts PORT [CERT_PATH KEY_PATH]`,
+  );
+  Deno.exit();
 }
 
 router.get("/chat", authorizationMiddleware, (ctx) => {
-   if (!ctx.isUpgradable) {
-   ctx.throw(501);
-   }
-   const ws = ctx.upgrade();
+  if (!ctx.isUpgradable) {
+    ctx.throw(501);
+  }
+  const ws = ctx.upgrade();
 
-   ws.onopen = function() {
-   console.log('WebSocket connection established.');
-   connections.push(ws);
-   };
+  ws.onopen = function () {
+    console.log("WebSocket connection established.");
+    connections.push(ws);
+  };
 
-   ws.onerror = (error) => {
-   console.log(`Error: ${error}`);
-   };
+  ws.onerror = (error) => {
+    console.log(`Error: ${error}`);
+  };
 
-   ws.onclose = () => {
-   console.log("Websocket closed");
-   };
+  ws.onclose = () => {
+    console.log("Websocket closed");
+  };
 
-      ws.onmessage = (event) => {
-         console.log(`Received: ${event.data}`);
-         for(let i =0; i<connections.length; i++){
-            connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`);
-         }
-      };
+  ws.onmessage = (event) => {
+    console.log(`Received: ${event.data}`);
+    for (let i = 0; i < connections.length; i++) {
+      connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`);
+    }
+  };
 });
 
 app.use(
-   oakCors({
-      origin: `https://localhost:8080`, // Allow requests from this origin
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
-      allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
-      credentials: true, // Allow credentials like cookies
-   })
+  oakCors({
+    origin: `https://localhost:8080`, // Allow requests from this origin
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
+    credentials: true, // Allow credentials like cookies
+  }),
 );
 console.log(`Oak back server running on port ${Deno.args[0]}`);
 
 app.use(router.routes());
-app.use(router.allowedMethods())
+app.use(router.allowedMethods());
 await app.listen({
   port: Number(Deno.args[0]),
   secure: true,
