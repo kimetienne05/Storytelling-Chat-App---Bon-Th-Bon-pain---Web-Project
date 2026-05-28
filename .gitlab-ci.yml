@@ -18,13 +18,10 @@ lint:
 test:
   stage: test
   script:
-    - echo "Compilation du code..."
     # Exemple concret pour Deno : mettre en cache les dépendances
-    - deno cache src/main.ts
     - echo "Lancement des tests..."
-    - deno test --allow-all
+    - deno test --allow-env /tests
     - echo "Terminé !"
-    - echo "Build du commit $CI_COMMIT_SHORT_SHA sur la branche $CI_COMMIT_BRANCH"
 
 # 3. Tests lourds avec Base de Données
 build:
@@ -35,7 +32,7 @@ build:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
   script:
-    - echo "Démarrage des services..."
+    - echo "Build du commit $CI_COMMIT_SHORT_SHA sur la branche $CI_COMMIT_BRANCH"
     - docker compose up -d --build
     - sleep 15
     - echo "Nettoyage..."
