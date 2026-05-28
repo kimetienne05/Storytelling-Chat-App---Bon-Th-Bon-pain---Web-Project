@@ -26,6 +26,8 @@ test:
 # 3. Tests lourds avec Base de Données
 build:
   stage: build
+  tags:
+    - docker-privileged
   services:
     - docker:dind
   variables:
