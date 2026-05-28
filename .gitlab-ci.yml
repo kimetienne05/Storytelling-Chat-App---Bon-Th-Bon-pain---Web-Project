@@ -39,6 +39,8 @@ test:
     - echo "Refaire les certificats pem"
     - echo "$CERT_PEM" > front/cert.pem
     - echo "$KEY_PEM" > front/key.pem
+    - echo "$CERT_PEM" > back/cert.pem
+    - echo "$KEY_PEM" > back/key.pem
 
 build-back:
   extends: .build
