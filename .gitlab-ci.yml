@@ -28,7 +28,7 @@ test:
     - echo "Terminé !"
 
 # 3. Tests lourds avec Base de Données
-build:
+.build:
   stage: build
   image: docker:27
   variables:
@@ -38,7 +38,7 @@ build:
     - echo "Build du commit $CI_COMMIT_SHORT_SHA sur la branche $CI_COMMIT_BRANCH"
 
 build-back:
-  extends: build
+  extends: .build
   script:
     - echo "build back"
     - docker build -f back/Dockerfile -t $IMAGE_BASE/back:CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/back:latest .
@@ -48,7 +48,7 @@ build-back:
     - echo "fini back"
 
 build-front:
-  extends: build
+  extends: .build
   script:
     - echo "build front"
     - docker build -f front/Dockerfile -t $IMAGE_BASE/front:CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/front:latest .
@@ -58,7 +58,7 @@ build-front:
     - echo "fini front"
 
 build-db:
-  extends: build
+  extends: .build
   image: mariadb:10.11
   script:
     - echo "test"
