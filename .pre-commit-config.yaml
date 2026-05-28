@@ -1,8 +1,8 @@
 repos:
-  - repo : local
+  - repo: local
     hooks:
-    - id: deno-fmt
-      name: verif format
-      language: system
-      entry: deno fmt
-      types: [file]
+      - id: deno-fmt
+        name: verif format
+        language: system
+        entry: deno fmt
+        types: [file]
