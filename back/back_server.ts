@@ -34,7 +34,7 @@ const db = await new Client().connect({
   username: Deno.env.get("MYSQL_USER") || "root",
   password: Deno.env.get("MYSQL_PASSWORD") || "",
   db: Deno.env.get("MYSQL_DATABASE") || "test",
-});
+}); 
 
 const { rows: data } = await db.execute("SELECT * FROM User");
 //console.log(await db.execute("SELECT VERSION() AS version"));
