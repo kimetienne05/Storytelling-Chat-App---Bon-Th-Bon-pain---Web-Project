@@ -1,5 +1,5 @@
 let ws =null;
-let send_message_button = document.getElementById("send");
+const send_message_button = document.getElementById("send");
 const new_message = document.getElementById("new_message");
 let refreshInterval = null;
 connectWebSocket();

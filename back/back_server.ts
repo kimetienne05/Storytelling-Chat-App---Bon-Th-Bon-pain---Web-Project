@@ -10,7 +10,6 @@ const app = new Application();
 const PEPPER = Deno.env.get("PASSWORD_PEPPER");
 if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
 
-const SALT_ROUNDS = 12;
 
 //pour tokens:
 export const ACCESS_TOKEN_EXPIRES_IN = 60*15; // 15 minutes in seconds
@@ -36,7 +35,7 @@ const db = await new Client().connect({
   db: Deno.env.get("MYSQL_DATABASE") || "test",
 }); 
 
-const { rows: data } = await db.execute("SELECT * FROM User");
+//const { rows: data } = await db.execute("SELECT * FROM User");
 //console.log(await db.execute("SELECT VERSION() AS version"));
 
 
@@ -134,7 +133,7 @@ router.post("/refresh", async (ctx) => {
     const payload = await verify(refreshToken, secretKey);
     username = payload.userName as string;
     table = (payload.isAdmin as boolean) ? "Admin" : "User";
-  } catch (err) {
+  } catch (_err) {
     ctx.response.status = 401;
     ctx.response.body = { error: "Erreur refresh token" };
     return;
@@ -327,9 +326,9 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
    console.log("Websocket closed");
    };
 
-      ws.onmessage = async (event) => {
+      ws.onmessage = (event) => {
          console.log(`Received: ${event.data}`);
-         for(var i =0; i<connections.length; i++){
+         for(let i =0; i<connections.length; i++){
             connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`);
          }
       };
