@@ -473,28 +473,63 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
 
          console.log("les anciens potins", old_tea)
       }
+      if(event.data === "partie fini on ajoute"){
+         try{
+            const recup = await db.execute(
+               "SELECT title, content, postDate, eventDate, UserName, idUser FROM PotinsPartie WHERE (isNew = ? AND truthValue = ?) ",[1,1]);
+            // const recup_tab = recup.rows?.[0];
+            const recup_tab = Array.isArray(recup.rows)
+               ? recup.rows
+               : Object.values(recup.rows || {});
+
+            for (let i = 0; i<recup_tab.length; i++){
+               await db.execute(
+               "INSERT INTO Tea (title, creator, fromGroup, textContent, type, postDate,eventDate,anonymous,status) VALUES(?,?,?,?,?,?,?,?,?)",
+               [recup_tab[i].title, recup_tab[i].idUser, null, recup_tab[i].content, 0, recup_tab[i].postDate, recup_tab[i].eventDate,false,0]
+                  
+            )
+            console.log("potin ajouté :", recup_tab[i].title);
+            }
+            await db.execute("drop table PotinsPartie;");
+            await db.execute(
+               "CREATE TABLE PotinsPartie (idPotin INT AUTO_INCREMENT PRIMARY KEY,title VARCHAR(50) NOT NULL,content VARCHAR(500) NOT NULL,truthValue BOOLEAN NOT NULL,isNew BOOLEAN NOT NULL,postDate DATE,eventDate DATE,idUser INT NOT NULL,CONSTRAINT fk_potin_userFOREIGN KEY (idUser)REFERENCES `User`(idUser)ON DELETE CASCADE);")
+         }catch(error){
+            console.error(error);
+         }
+
+      }
    };
 });
 
 router.post("/pr", authorizationMiddleware, async (ctx) => {
    try{
       const body = await ctx.request.body.json();
-      const {title, content, truthValue} = body;
-      const current_username = ctx.state.tokenData.userName;
-      const userRes = await db.execute(
-               "SELECT idUser FROM User WHERE userName = ?", [current_username]
-      );
-      const user = userRes.rows?.[0];
+      const title = body.title;
+      const content = body.content;
+      const truthValue = body.truthValue === true ? 1 : 0;
+      const isNew = 1; 
+      const today = new Date().toISOString().slice(0, 10); 
+      const eventDate = body.eventDate || null;
 
-      if (!user) {
+      const current_username = ctx.state.tokenData.userName;
+      const userResult = await db.execute("SELECT idUser FROM User WHERE userName = ?", [current_username]);
+      const userRows = Array.isArray(userResult.rows) ? userResult.rows : Object.values(userResult.rows || {});
+      
+      if (userRows.length === 0) {
          ctx.response.status = 404;
-         ctx.response.body = { error: "Utilisateur introuvable" };
+         ctx.response.body = { error: "Utilisateur non trouvé" };
          return;
       }
 
+      const idUser = userRows[0].idUser;
+      
+      const userRes = await db.execute(
+      "SELECT idUser FROM User WHERE userName = ?", [current_username]
+      );
+
       await db.execute(
-         "INSERT INTO PotinsPartie(title, content, truthValue, UserName) VALUES (?, ?, ?, ?)",
-         [title, content, truthValue,current_username]
+         "INSERT INTO PotinsPartie(title, content, truthValue, isNew, postDate, UserName, idUser) VALUES (?, ?, ?, ?, ?, ?, ?)",
+         [title, content, truthValue, isNew, today, current_username, idUser]
       );
       console.log(`Nouveau potin ajouté par ${current_username}`);
 
@@ -512,35 +547,33 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
 });
 
 router.post("/pr_bis", authorizationMiddleware, async (ctx) => {
-   // 1. Est-ce que la requête contient bien du texte/data ?
-   const hasBody = ctx.request.hasBody;
-   console.log("La requête a-t-elle un contenu ?", hasBody); // Doit afficher: true
 
-   // 2. Quel type de contenu le front prétend envoyer ?
    console.log("ContentType détecté par le serveur :", ctx.request.headers.get("content-type"));
    try{
       const body = await ctx.request.body.json();
-      console.log("body",body)
-      const {title, content} = body;
+      const title = body.title || "Potin Importé";
+      const content = body.content || "Pas de contenu";
+      const truthValue = body.truthValue === true ? 1 : 0;
+
+      const isNew = 0; 
+      const today = new Date().toISOString().slice(0, 10);
+      const eventDate = body.eventDate || null;
       const current_username = ctx.state.tokenData.userName;
-      const titre = body.title;
-      const story = body.content;
 
-      const userRes = await db.execute(
-         "SELECT idUser FROM User WHERE userName = ?", [current_username]
-      );
-      const user = userRes.rows?.[0];
-
-      if (!user) {
+      const userResult = await db.execute("SELECT idUser FROM User WHERE userName = ?", [current_username]);
+      const userRows = Array.isArray(userResult.rows) ? userResult.rows : Object.values(userResult.rows || {});
+      
+      if (userRows.length === 0) {
          ctx.response.status = 404;
-         ctx.response.body = { error: "Utilisateur introuvable" };
+         ctx.response.body = { error: "Utilisateur non trouvé" };
          return;
       }
-      await db.execute(
-         "INSERT INTO PotinsPartie(title, content, truthValue, UserName) VALUES (?, ?, ?, ?)",
-         [titre, story, true,current_username]
-      );
+      const idUser = userRows[0].idUser;
 
+      await db.execute(
+         "INSERT INTO PotinsPartie(title, content, truthValue, isNew, postDate, UserName, idUser) VALUES (?, ?, ?, ?, ?, ?, ?)",
+         [title, content, truthValue, isNew, today, current_username, idUser]
+      );
       console.log(`Nouveau potin ajouté par ${current_username}`);
 
       

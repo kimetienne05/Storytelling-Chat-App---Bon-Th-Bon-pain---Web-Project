@@ -6,6 +6,7 @@ let prep_time_limit = 0;
 let round_time_limit = 0; 
 let round_actuel = 1;
 let jeSuisAdminPartie = false; 
+
 ws.onopen = function (){
     console.log("new player joined");
     ws.send("add_new_player");
@@ -152,6 +153,10 @@ function add_potin(){
     let title = document.getElementById("potin_titre").value
     let story = document.getElementById("potin_contenue").value
     let vrai = false;
+    let dateEvenement = document.getElementById("potin_date_evenement").value;
+    if (dateEvenement === "") {
+        dateEvenement = null; // Gère le cas où l'utilisateur ne met pas de date
+    }
     if (document.getElementById("potin_vrai").checked){
         vrai = true;
     }
@@ -164,7 +169,7 @@ function add_potin(){
     'Content-type': 'application/json; charset=UTF-8',
     },
     body: JSON.stringify({
-    "title" : title, "content": story, "truthValue": vrai
+    "title" : title, "content": story, "truthValue": vrai, "eventDate": dateEvenement
     }),
     })
     .catch((error) => {
@@ -177,18 +182,21 @@ function add_potin(){
     document.getElementById("potin_contenue").value=""
     document.getElementById("potin_vrai").checked=false
     document.getElementById("potin_faux").checked=false
+    document.getElementById("potin_date_evenement").value=""
 }
 
 function display_potin() {
     ws.send("send_me_old_tea");
 }
 
-function add_old_tea(tab){
+async function add_old_tea(tab){
     try{
-        const titre = tab.title;
-        const content = tab.textContent;
-        console.log(tab);
-        fetch('https://localhost:3000/pr_bis', {
+        // On conserve ton style d'extraction d'origine adapté à l'élément de la boucle
+        const titre = tab.title || "Titre inconnu";
+        const content = tab.textContent || tab.content || "Aucun contenu";
+        const eventDate = tab.eventDate || null; 
+
+        await fetch('https://localhost:3000/pr_bis', {
         method : 'POST',
         mode : 'cors',
         credentials: 'include',
@@ -196,13 +204,20 @@ function add_old_tea(tab){
         'Content-type': 'application/json; charset=UTF-8',
         },
         body: JSON.stringify({
-        "title" : titre , "content": content
+        "title" : titre, 
+        "content": content, 
+        "truthValue": tab.truthValue !== undefined ? tab.truthValue : true,
+        "eventDate": eventDate
         }),
         });
-
+        
     }catch(error) {
         console.error('Fetch error:', error);
         alert("ajout potin échoué! kim triste");
     }
+}
+    
 
+function definitive_add(){
+    ws.send("partie fini on ajoute");
 }
