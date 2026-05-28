@@ -11,6 +11,10 @@ const clients = new Set();
 let current_pr_settings ={nbp: 3, prtime: 60, rtime: 30}
 let old_tea : any[]=[];
 let potin_pool: any[] = [];
+const game_players: Map<string, { ws: WebSocket, score: number }> = new Map();
+let round_answers: Map<string, { auteur: string, verite: boolean }> = new Map();
+let current_potin: any = null;
+let round_timer: number | null = null;
 //pepper:
 const PEPPER = Deno.env.get("PASSWORD_PEPPER");
 if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
@@ -365,6 +369,10 @@ router.post("/settings", async (ctx) => {
    ctx.response.status = 200;
    const res = await db.execute("SELECT * FROM PotinsPartie");
    potin_pool = Array.isArray(res.rows) ? [...res.rows] : Object.values(res.rows || {});
+   for (const [username, player] of game_players) {
+      game_players.set(username, { ws: player.ws, score: 0 });
+   }
+   round_answers = new Map();
 });
 
 let adminPartieUser: string | null = null;
@@ -392,6 +400,8 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
       }
       const index = connections.indexOf(ws);
       if (index !== -1) connections.splice(index, 1);
+
+      game_players.delete(current_username); //on degage le joueur de la game
    };
 
    ws.onmessage = async (event) => {
@@ -403,13 +413,20 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
             adminPartieUser = current_username;
             console.log(`[GAME] ${adminPartieUser} est désigné AdminPartie `);
          }
-
-         // Envoyer une mise à jour à tout le monde pour le compteur
-         for (let i = 0; i < connections.length; i++) {
-            if (connections[i].readyState === WebSocket.OPEN) {
-               connections[i].send("plus one");
+         
+         game_players.set(current_username, { ws, score: 0 });
+         const playerList = Array.from(game_players.entries()).map(([name, p]) => ({ name, score: p.score }));
+         for (const [, player] of game_players) {
+            if (player.ws.readyState === WebSocket.OPEN) {
+               player.ws.send(JSON.stringify({ action: "player_list", players: playerList }));
             }
          }
+         // Envoyer une mise à jour à tout le monde pour le compteur
+         // for (let i = 0; i < connections.length; i++) {
+         //    if (connections[i].readyState === WebSocket.OPEN) {
+         //       connections[i].send("plus one");
+         //    }
+         // }
          // Renvoyer les configurations et le statut d'admin spécifique à ce joueur
          ws.send(JSON.stringify({ 
             action: "current pr settings", 
@@ -452,6 +469,17 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
          for (const c of connections) {
             if (c.readyState === WebSocket.OPEN) c.send(msg);
          }
+         current_potin = potin;
+         round_answers = new Map(); // reset les réponses du round
+
+         // Timer serveur : au bout de rtime secondes, on passe au reveal
+         if (round_timer) clearTimeout(round_timer);
+         round_timer = setTimeout(() => {
+            const revealMsg = JSON.stringify({ action: "change_screen", screen: "reveal" });
+            for (const [, p] of game_players) {
+               if (p.ws.readyState === WebSocket.OPEN) p.ws.send(revealMsg);
+            }
+         }, Number(current_pr_settings.rtime) * 1000);
       }
       if (event.data === "send_me_old_tea"){
 
@@ -460,12 +488,6 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
          );
 
          const teas = Array.isArray(posted.rows) ? posted.rows : Object.values(posted.rows || {});
-         // console.log("teas bruts:", teas)
-         // console.log("filtre:", teas.filter(tea => tea.UserName === current_username))
-
-         // console.log("current_username:", JSON.stringify(current_username));
-         // console.log("tea.UserName:", JSON.stringify(teas[0]?.UserName));
-         // console.log("égaux ?", teas[0]?.UserName === current_username);
          ws.send(JSON.stringify({
             action: "get_old_tea",
             donnees: teas.filter(tea => tea.UserName === current_username),
@@ -499,6 +521,43 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
             console.error(error);
          }
 
+      }
+      if (event.data.startsWith("{") ) {
+         try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.action === "submit_answer") {
+               // Enregistrer la réponse du joueur
+               round_answers.set(current_username, {
+                  auteur: parsed.auteur,
+                  verite: parsed.verite
+               });
+
+               // Calculer le point : bonne réponse = bon auteur ET bonne véracité
+               const bonAuteur = parsed.auteur === current_potin?.UserName;
+               const bonneVerite = parsed.verite === Boolean(current_potin?.truthValue);
+               if (bonAuteur && bonneVerite) {
+                  const p = game_players.get(current_username);
+                  if (p) game_players.set(current_username, { ws: p.ws, score: p.score + 1 });
+               }
+
+               // Broadcaster les scores mis à jour
+               const playerList = Array.from(game_players.entries()).map(([name, p]) => ({ name, score: p.score }));
+               for (const [, p] of game_players) {
+                  if (p.ws.readyState === WebSocket.OPEN) {
+                     p.ws.send(JSON.stringify({ action: "player_list", players: playerList }));
+                  }
+               }
+
+               // Si tout le monde a répondu → reveal immédiat
+               if (round_answers.size >= game_players.size) {
+                  if (round_timer) { clearTimeout(round_timer); round_timer = null; }
+                  const revealMsg = JSON.stringify({ action: "change_screen", screen: "reveal" });
+                  for (const [, p] of game_players) {
+                     if (p.ws.readyState === WebSocket.OPEN) p.ws.send(revealMsg);
+                  }
+               }
+            }
+         } catch { }
       }
    };
 });

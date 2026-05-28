@@ -6,7 +6,9 @@ let prep_time_limit = 0;
 let round_time_limit = 0; 
 let round_actuel = 1;
 let jeSuisAdminPartie = false; 
-
+let selected_auteur = null;
+let selected_verite = null;
+let timer_interval = null;
 ws.onopen = function (){
     console.log("new player joined");
     ws.send("add_new_player");
@@ -49,6 +51,10 @@ ws.onmessage = function(event){
 
         if (settings_from_back.action === "change_screen") {
             switch_screen(settings_from_back.screen);
+            if (settings_from_back.screen === "guess") {
+                startTimer(Number(round_time_limit));
+                resetSelections();
+            }
         }
         if (settings_from_back.action === "get_old_tea"){
             const conteneur = document.getElementById("liste_thes_container");
@@ -71,10 +77,18 @@ ws.onmessage = function(event){
                 conteneur.appendChild(carte);
                 const ajout = document.createElement("button");
                 ajout.innerText ="ajoutez ce potin à la partie"
-                ajout.addEventListener("click", () =>{add_old_tea(the);} )
+                ajout.addEventListener("click", () =>{
+                    add_old_tea(the);
+                    ajout.disabled = true ;
+                    ajout.innerText = "dejà ajouté"
+                } )
                 carte.appendChild(ajout);
 
             });
+        }
+        if (settings_from_back.action === "player_list") {
+        updateScoreboard(settings_from_back.players);
+        buildJoueursBoutons(settings_from_back.players.map(p => p.name));
         }
     } catch {
         console.warn("Message non-JSON reçu :", event.data);
@@ -95,24 +109,21 @@ async function ready() {
         ws.send("next_potin");
     }
     switch_screen('guess');
+    startTimer(Number(round_time_limit));
+    resetSelections();
 }
 
-function switch_screen(next_screen){
-    const game_screens = document.querySelectorAll('.pr');
-    
-    game_screens.forEach(function(pr){
-        pr.style.display = 'none';
-    });
+function switch_screen(next_screen) {
+   document.querySelectorAll('.pr').forEach(el => el.style.display = 'none');
 
-    const display_screen = document.getElementById(next_screen);
-    if (display_screen){
-        display_screen.style.display = 'block';
-        console.log('switch successfull');
-    }
+   const display_screen = document.getElementById(next_screen);
+   if (display_screen) {
+      display_screen.style.display = next_screen === 'guess' ? 'flex' : 'block';
+   }
 
-    if(next_screen === 'potin_making'){
-        ws.send("send_me_old_tea");
-    }
+   if (next_screen === 'potin_making') {
+      ws.send("send_me_old_tea");
+   }
 }
 
 function loop(last_screen,results){
@@ -153,6 +164,7 @@ function add_potin(){
     let title = document.getElementById("potin_titre").value
     let story = document.getElementById("potin_contenue").value
     let dateEvenement = document.getElementById("potin_date_evenement").value;
+    const verite = document.querySelector('input[name="verite"]:checked');
 
     if (!title.trim() || !story.trim()) {
     alert("Le titre et le contenu sont obligatoires !");
@@ -226,4 +238,78 @@ async function add_old_tea(tab){
 
 function definitive_add(){
     ws.send("partie fini on ajoute");
+}
+
+function buildJoueursBoutons(joueurs) {
+   const container = document.getElementById("joueurs-boutons");
+   if (!container) return;
+   container.innerHTML = "";
+   joueurs.forEach(nom => {
+      const btn = document.createElement("button");
+      btn.className = "joueur-btn";
+      btn.innerText = nom;
+      btn.onclick = () => {
+         document.querySelectorAll(".joueur-btn").forEach(b => b.classList.remove("selected"));
+         btn.classList.add("selected");
+         selected_auteur = nom;
+         updateConfirmerBtn();
+      };
+      container.appendChild(btn);
+   });
+}
+
+function setVerite(val) {
+   selected_verite = val;
+   document.getElementById("btn_vrai").classList.toggle("selected", val === true);
+   document.getElementById("btn_faux").classList.toggle("selected", val === false);
+   updateConfirmerBtn();
+}
+
+function updateConfirmerBtn() {
+   const btn = document.getElementById("btn_confirmer");
+   if (btn) btn.disabled = (selected_auteur === null || selected_verite === null);
+}
+
+function confirmerReponse() {
+   ws.send(JSON.stringify({
+      action: "submit_answer",
+      auteur: selected_auteur,
+      verite: selected_verite
+   }));
+   // Désactiver après envoi pour éviter double vote
+   document.getElementById("btn_confirmer").disabled = true;
+   document.querySelectorAll(".joueur-btn, .btn-verite").forEach(b => b.disabled = true);
+}
+
+function updateScoreboard(players) {
+   const sidebar = document.getElementById("scoreboard");
+   if (!sidebar) return;
+   const sorted = [...players].sort((a, b) => b.score - a.score);
+   sidebar.innerHTML = `<h3>🏆 Scores</h3>` + sorted.map((p, i) =>
+      `<div class="score-row"><span>${i === 0 ? "👑 " : ""}${p.name}</span><span class="pts">${p.score} pts</span></div>`
+   ).join("");
+}
+
+function startTimer(seconds) {
+   if (timer_interval) clearInterval(timer_interval);
+   const bar = document.getElementById("timer-bar");
+   if (!bar) return;
+   bar.style.width = "100%";
+   let remaining = seconds;
+   timer_interval = setInterval(() => {
+      remaining--;
+      const pct = (remaining / seconds) * 100;
+      bar.style.width = pct + "%";
+      bar.style.background = pct < 30 ? "#e74c3c" : "#2ecc71";
+      if (remaining <= 0) clearInterval(timer_interval);
+   }, 1000);
+}
+function resetSelections() {
+   selected_auteur = null;
+   selected_verite = null;
+   document.querySelectorAll(".joueur-btn, .btn-verite").forEach(b => {
+      b.classList.remove("selected");
+      b.disabled = false;
+   });
+   updateConfirmerBtn();
 }

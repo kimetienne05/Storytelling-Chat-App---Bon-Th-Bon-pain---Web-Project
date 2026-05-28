@@ -48,13 +48,23 @@
          </div>
 
 
-        <div id="guess" class="pr"> 
-            <h1> A toi de jouer </h1>
-            <p> Découvrir le potin : <var id="titre_guess"></var></p> 
-            <p> Mais qu'est ce que ça raconte de beau? : <var id="content_guess"></var></p> 
-            <button> vrai </button> <button> faux </button> 
-            <p>Rentrer le nom de la chipie</p>
-            <input type="text" id="potin"> <button onclick="switch_screen('reveal')"> Confirmer mon vote </button> 
+        <div id="guess" class="pr game-layout">
+            <div class="game-main">
+                <h1>À toi de jouer</h1>
+                <div id="timer-bar-container"><div id="timer-bar"></div></div>
+                <p id="titre_guess_label">Le potin : <strong id="titre_guess"></strong></p>
+                <p id="content_guess"></p>
+
+                <p>Qui a balancé ce potin ?</p>
+                <div id="joueurs-boutons"></div>
+
+                <p>C'est vrai ou faux ?</p>
+                <button class="btn-verite" onclick="setVerite(true)" id="btn_vrai">✅ Vrai</button>
+                <button class="btn-verite" onclick="setVerite(false)" id="btn_faux">❌ Faux</button>
+
+                <button id="btn_confirmer" onclick="confirmerReponse()" disabled>Confirmer mon vote</button>
+            </div>
+        <div class="game-sidebar" id="scoreboard"></div>
         </div>
 
         <div id="reveal" class="pr"> 
