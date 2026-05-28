@@ -41,6 +41,8 @@ test:
     - echo "$KEY_PEM" > front/key.pem
     - echo "$CERT_PEM" > back/cert.pem
     - echo "$KEY_PEM" > back/key.pem
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
 
 build-back:
   extends: .build
