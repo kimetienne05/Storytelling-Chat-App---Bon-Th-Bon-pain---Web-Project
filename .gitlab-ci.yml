@@ -41,5 +41,3 @@ build:
     - echo "Nettoyage..."
     - docker compose push
     - docker compose down -v
-
-
