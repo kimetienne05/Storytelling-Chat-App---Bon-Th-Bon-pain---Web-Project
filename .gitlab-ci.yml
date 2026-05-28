@@ -41,7 +41,7 @@ build-back:
   extends: .build
   script:
     - echo "build back"
-    - docker build -f back/Dockerfile -t $IMAGE_BASE/back:CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/back:latest .
+    - docker build -f back/Dockerfile -t $IMAGE_BASE/back:$CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/back:latest back/
     - echo "On push"
     - docker push $IMAGE_BASE/back:$CI_COMMIT_SHORT_SHA
     - docker push $IMAGE_BASE/back:latest
@@ -51,7 +51,7 @@ build-front:
   extends: .build
   script:
     - echo "build front"
-    - docker build -f front/Dockerfile -t $IMAGE_BASE/front:CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/front:latest .
+    - docker build -f front/Dockerfile -t $IMAGE_BASE/front:CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/front:latest front/
     - echo "On push"
     - docker push $IMAGE_BASE/front:$CI_COMMIT_SHORT_SHA
     - docker push $IMAGE_BASE/front:latest
