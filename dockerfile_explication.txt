@@ -1,0 +1,21 @@
+celui du back
+
+FROM denoland/deno:alpine-2.7.14 AS builder //prend version légère et sécuriser
+WORKDIR /app //crée dossier app dans le docker
+COPY deno.json deno.lock* ./ //on prend les dépendances dans nos fichiers deno
+RUN deno install //on install tout
+COPY . . //on copy tout nos fichiers
+RUN deno cache back_server.ts  //on télécharge les dep de back et on le compile 
+
+
+FROM denoland/deno:alpine-2.7.14 //on passe à la deuxièle étape après le build
+WORKDIR /app
+COPY --from=builder /deno-dir /deno-dir //on reprend les dep et tout tu build
+COPY --from=builder /app/deno.json ./
+COPY --from=builder /app/back_server.ts ./
+COPY --from=builder /app/key.pem ./
+COPY --from=builder /app/cert.pem ./  //la on a récupéré tout les fichier dont on a besoin pour tourner
+ENV DENO_DIR=/deno-dir //on dit à deno que c'est ici spn environnement
+CMD ["deno", "task", "start"] //on lance start
+
+docker builder prune pour laver tout le bordel laissé après
