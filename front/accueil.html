@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tea Party</title>
+
+    <script src="accueil.js" defer></script>
+    <link rel="stylesheet" href="accueil.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- HEADER -->
+        <div class="header">
+
+            <button onclick="Logout()">Déconnexion</button>
+
+            <h1>Bon Thé Bon Pain</h1>
+
+            <button onclick="CreeGroup()">+</button>
+
+        </div>
+
+        <!-- CONTENU -->
+        <div class="main">
+
+            <div class="left">
+                <h2>Invitation</h2>
+                <div id="invitationList"></div>
+            </div>
+
+            <div class="groupe">
+                <h2>Liste des groupes</h2>
+                <div id="groupList"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- POPUP -->
+    <div id="popup">
+
+        <div id="popupouvert">
+
+            <h2>Nouveau Groupe</h2>
+
+            <input id="nomGroupe" type="text" placeholder="Nom du groupe">
+
+            <br><br>
+
+            <input
+                id="searchUser"
+                type="text"
+                placeholder="Rechercher un utilisateur"
+                onkeyup="FilterUsers()"
+            >
+
+            <div id="userList"></div>
+
+            <br>
+
+            <button onclick="AddGroup()">Créer le groupe</button>
+
+            <button onclick="FermerPopup()">Fermer</button>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

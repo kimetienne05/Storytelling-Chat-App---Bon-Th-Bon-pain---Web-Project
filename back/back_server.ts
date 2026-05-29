@@ -16,16 +16,6 @@ const SALT_ROUNDS = 12;
 export const ACCESS_TOKEN_EXPIRES_IN = 60*15; // 15 minutes in seconds
 export const REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
 
-// base données pour la connexion
-
-/*
- {id : '1', name: "baptpoulpe", passwordHash : await get_hash("test")},
- {id : '2',name : "emie", passwordHash : await get_hash("animal")},
- {id : '3',name : "aanor", passwordHash : await get_hash("vache")},
- {id : '4',name : "kim",passwordHash : await get_hash("tunnel")},
-]*/
-
-
 //sql
 
 const db = await new Client().connect({
@@ -112,6 +102,8 @@ async function validateRefreshTokenInDb(name: string, tab: string, refreshToken:
    }
 
 }
+
+console.log(await get_hash("admin"));
 
 router.post("/refresh", async (ctx) => {
   const cookieHeader = ctx.request.headers.get("cookie");
@@ -272,7 +264,6 @@ router.post("/inscription", async (ctx) => {
    
 });
 
-
 // Middleware to verify JWT token
 const authorizationMiddleware = async (ctx: Context, next: () => Promise<unknown>) => {
    const cookie = ctx.request.headers.get("cookie");
@@ -303,6 +294,35 @@ const authorizationMiddleware = async (ctx: Context, next: () => Promise<unknown
 
 });
 
+const userMiddleware = async (ctx: Context, next: () => Promise<unknown>) => {
+   try {
+      const username = ctx.state.tokenData.userName;
+      const isadmin = ctx.state.tokenData.isAdmin;
+      const table = isadmin ? "Admin" : "User";
+      const result = await db.execute(
+         `SELECT * FROM ${table} WHERE userName = ?`,
+         [username]
+      );
+      const user = result.rows[0];
+      if (!user) {
+         ctx.response.status = 401;
+         ctx.response.body = {
+            error: "Utilisateur introuvable"
+         };
+         return;
+      }
+      ctx.state.user = user;
+      await next();
+
+   } catch(error) {
+      console.log(error);
+      ctx.response.status = 500;
+      ctx.response.body = {
+         error: "Erreur serveur"
+      };
+   }
+};
+
 if (Deno.args.length < 1) {
    console.log(`Usage: $ deno run --allow-net server.ts PORT [CERT_PATH KEY_PATH]`);
    Deno.exit();
@@ -328,11 +348,223 @@ router.get("/chat", authorizationMiddleware, (ctx) => {
    };
 
       ws.onmessage = async (event) => {
-         console.log(`Received: ${event.data}`);
-         for(var i =0; i<connections.length; i++){
-            connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`);
+
+         const data = JSON.parse(event.data);
+
+         if (data.type !== "chat:message") return;
+
+         const username = ctx.state.tokenData.userName;
+
+         for (const client of connections) {
+            client.send(
+                  JSON.stringify({
+                     type: "chat:message",
+                     groupId: data.groupId,
+                     message: `${username} : ${data.message}`
+                  })
+            );
          }
       };
+});
+router.post("/addgroup", authorizationMiddleware, async (ctx) => {
+
+   const body = await ctx.request.body.json();
+
+   const { nom, users } = body;
+
+   // utilisateur connecté
+   const username = ctx.state.tokenData.userName;
+
+   // récupérer son id
+   const result = await db.execute(
+      "SELECT idUser FROM User WHERE userName = ?",
+      [username]
+   );
+
+   const user = result.rows[0];
+
+   // créer le groupe
+   await db.execute(
+      "INSERT INTO Groups(groupName, groupOwner) VALUES (?, ?)",
+      [nom, user.idUser]
+   );
+
+   // récupérer l'id du groupe créé
+   const groupResult = await db.execute(
+      "SELECT LAST_INSERT_ID() as id"
+   );
+
+   const groupId = groupResult.rows[0].id;
+
+   // ajouter le propriétaire
+   await db.execute(
+      "INSERT INTO UserGroup(idUser, idGroup, status) VALUES (?, ?, ?)",
+      [user.idUser, groupId, "accepted"]
+   );
+
+   // ajouter les invités
+   for(let i = 0; i < users.length; i++){
+
+      await db.execute(
+         "INSERT INTO UserGroup(idUser, idGroup, status) VALUES (?, ?, ?)",
+         [users[i], groupId, "waiting"]
+      );
+   }
+
+   ctx.response.status = 200;
+
+   ctx.response.body = {
+      message: "Groupe créé",
+      idGroup: groupId
+   };
+});
+router.get("/groups",authorizationMiddleware,userMiddleware,async (ctx) => {
+
+   const user = ctx.state.user;
+   const isadmin = ctx.state.tokenData.isAdmin;
+
+   if(!isadmin){
+
+      const groups = await db.execute(
+         `
+         SELECT Groups.idGroup, Groups.groupName
+         FROM UserGroup
+         JOIN Groups ON UserGroup.idGroup = Groups.idGroup
+         WHERE UserGroup.idUser = ?
+         AND UserGroup.status = 'accepted'
+         `,
+         [user.idUser]
+      );
+
+      ctx.response.status = 200;
+      ctx.response.body = groups.rows;
+
+   } else {
+
+      const groups = await db.execute(
+         `
+         SELECT Groups.idGroup, Groups.groupName
+         FROM Groups
+         `
+      );
+
+      ctx.response.status = 200;
+      ctx.response.body = groups.rows;
+   }
+});
+router.get("/users",authorizationMiddleware,userMiddleware,async (ctx) => {
+      const user = ctx.state.user;
+      const users = await db.execute(
+         `
+         SELECT idUser, userName
+         FROM User
+         WHERE userName != ?
+         `,
+         [user.userName]
+      );
+      ctx.response.body = users.rows;
+   }
+);
+router.get("/group/usersnotin/:id", authorizationMiddleware, async (ctx) => {
+
+    const groupId = ctx.params.id;
+
+    const res = await db.execute(`
+        SELECT idUser, userName
+        FROM User
+        WHERE idUser NOT IN (
+
+            SELECT idUser
+            FROM UserGroup
+            WHERE idGroup = ?
+
+        )
+    `, [groupId]);
+
+    ctx.response.body = res.rows;
+});
+
+router.post("/invitation",authorizationMiddleware,userMiddleware,async (ctx) => {
+      try {
+         const body = await ctx.request.body.json();
+         const { idGroup, action } = body;
+         const user = ctx.state.user;
+
+         // ACCEPTER
+         if(action === "accept") {
+            await db.execute(
+               `
+               UPDATE UserGroup
+               SET status = 'accepted'
+               WHERE idUser = ? AND idGroup = ?
+               `,
+               [user.idUser, idGroup]
+            );
+            ctx.response.body = {
+               message: "Invitation acceptée"
+            }; 
+            return;
+         }
+         // REFUSER
+         if(action === "refuse") {
+            await db.execute(
+               `
+               DELETE FROM UserGroup
+               WHERE idUser = ? AND idGroup = ?
+               `,
+               [user.idUser, idGroup]
+            );
+            ctx.response.body = {
+               message: "Invitation refusée"
+            };
+            return;
+         }
+         ctx.response.status = 400;
+         ctx.response.body = {
+            error: "Action invalide"
+         };
+      } catch(error) {
+         console.log(error);
+         ctx.response.status = 500;
+         ctx.response.body = {
+            error: "Erreur serveur"
+         };
+      }
+   }
+);
+router.post("/invite", authorizationMiddleware, async (ctx) => {
+
+    const body = await ctx.request.body.json();
+
+    const { groupId, users } = body;
+
+    for(let i = 0; i < users.length; i++){
+
+        await db.execute(
+            `
+            INSERT INTO UserGroup(idUser, idGroup, status)
+            VALUES (?, ?, ?)
+            `,
+            [users[i], groupId, "waiting"]
+        );
+    }
+
+    ctx.response.body = {
+        message: "Invitations envoyées"
+    };
+});
+router.get("/group/members/:id", authorizationMiddleware, async (ctx) => {
+    const groupId = ctx.params.id;
+
+    const res = await db.execute(`
+        SELECT User.idUser, User.userName
+        FROM UserGroup
+        JOIN User ON UserGroup.idUser = User.idUser
+        WHERE UserGroup.idGroup = ?
+        AND UserGroup.status = 'accepted'
+    `, [groupId]);
+
+    ctx.response.body = res.rows;
 });
 
 app.use(
@@ -343,6 +575,63 @@ app.use(
       credentials: true, // Allow credentials like cookies
    })
 );
+router.post("/logout", (ctx) => {
+
+    ctx.response.headers.set(
+        "Set-Cookie",
+        "auth_token=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/"
+    );
+
+    ctx.response.headers.append(
+        "Set-Cookie",
+        "refresh_token=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/"
+    );
+
+    ctx.response.body = {
+        message: "Déconnecté"
+    };
+});
+router.get(
+    "/invitations",
+    authorizationMiddleware,
+    userMiddleware,
+    async (ctx) => {
+
+        const user = ctx.state.user;
+
+        const res = await db.execute(`
+            SELECT
+                Groups.idGroup,
+                Groups.groupName
+            FROM UserGroup
+            JOIN Groups
+                ON UserGroup.idGroup = Groups.idGroup
+            WHERE UserGroup.idUser = ?
+            AND UserGroup.status = 'waiting'
+        `, [user.idUser]);
+
+        ctx.response.body = res.rows;
+    }
+);
+router.post("/group/leave", authorizationMiddleware, userMiddleware, async (ctx) => {
+
+    const body = await ctx.request.body.json();
+    const { idGroup } = body;
+
+    const user = ctx.state.user;
+
+    await db.execute(
+        `
+        DELETE FROM UserGroup
+        WHERE idUser = ? AND idGroup = ?
+        `,
+        [user.idUser, idGroup]
+    );
+
+    ctx.response.body = {
+        message: "Groupe quitté"
+    };
+});
 console.log(`Oak back server running on port ${Deno.args[0]}`);
 
 app.use(router.routes());
