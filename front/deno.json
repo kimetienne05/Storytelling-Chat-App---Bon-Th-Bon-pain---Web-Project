@@ -6,5 +6,10 @@
   "tasks": {
     "build": "mkdir -p dist && cp index.html login.html style.css login.js chat.js dist/",
     "start": "deno run --allow-net --allow-read front_server.ts 8080 "
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-import-prefix"]
+    }
   }
 }

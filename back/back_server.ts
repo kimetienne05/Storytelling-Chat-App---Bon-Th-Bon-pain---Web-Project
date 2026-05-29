@@ -89,7 +89,6 @@ function strcmp(a: string, b: string) {
   return 0;
 }
 
-
 function goodUsername(name: string): string {
   if (name.length > 50) {
     return "Name est trop long";
@@ -99,7 +98,6 @@ function goodUsername(name: string): string {
   }
   return "";
 }
-
 
 // routes
 
@@ -286,10 +284,12 @@ router.post("/inscription", async (ctx) => {
     return;
   }
   const ResUserNameTest = goodUsername(name);
-  if (strcmp(ResUserNameTest,"") == 1){
+  if (strcmp(ResUserNameTest, "") == 1) {
     ctx.response.status = 406;
     ctx.response.body = { error: ResUserNameTest };
-    console.log("Vous avez violez les lois des Usernames et serez executés demain à midi");
+    console.log(
+      "Vous avez violez les lois des Usernames et serez executés demain à midi",
+    );
     return;
   }
 

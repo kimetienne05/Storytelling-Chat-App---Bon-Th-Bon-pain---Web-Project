@@ -5,5 +5,10 @@
   },
   "tasks": {
     "start": "deno run --allow-env --allow-read --allow-net back_server.ts 3000"
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-import-prefix"]
+    }
   }
 }
