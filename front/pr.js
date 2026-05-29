@@ -33,7 +33,7 @@ ws.onmessage = function(event){
         
         if (settings_from_back.action == "current pr settings") { 
             nb_round = settings_from_back.donnees.nbp; 
-            quota_potins = Number(msg.donnees.nbp);
+            quota_potins = Number(settings_from_back.donnees.nbp);
             updateQuotaDisplay();
             prep_time_limit = settings_from_back.donnees.prtime; 
             round_time_limit = settings_from_back.donnees.rtime; 
@@ -119,17 +119,32 @@ async function ready() {
     resetSelections();
 }
 
+// function switch_screen(next_screen) {
+//    document.querySelectorAll('.pr').forEach(el => el.style.display = 'none');
+
+//    const display_screen = document.getElementById(next_screen);
+//    if (display_screen) {
+//       display_screen.style.display = next_screen === 'guess' ? 'flex' : 'block';
+//    }
+
+//    if (next_screen === 'potin_making') {
+//       ws.send("send_me_old_tea");
+//    }
+// }
 function switch_screen(next_screen) {
-   document.querySelectorAll('.pr').forEach(el => el.style.display = 'none');
-
-   const display_screen = document.getElementById(next_screen);
-   if (display_screen) {
-      display_screen.style.display = next_screen === 'guess' ? 'flex' : 'block';
-   }
-
-   if (next_screen === 'potin_making') {
-      ws.send("send_me_old_tea");
-   }
+  document.querySelectorAll('.pr').forEach(el => {
+    el.style.setProperty('display', 'none', 'important');
+  });
+  const screen = document.getElementById(next_screen);
+  if (screen) {
+    const flexScreens = ['potin_making', 'guess', 'reveal', 'results'];
+    const displayValue = flexScreens.includes(next_screen) ? 'flex' : 'block';
+    screen.style.setProperty('display', displayValue, 'important');
+  }
+  if (next_screen === 'potin_making') {
+    ws.send("send_me_old_tea");
+    updateQuotaDisplay(); // remplace syncQuotaFromSettings qui n'existe pas
+  }
 }
 
 function loop(last_screen,results){
@@ -155,6 +170,8 @@ function loop(last_screen,results){
     } else {
         console.log("Fin du jeu ! Passage aux résultats.");
         switch_screen(results);
+        const winner = [...game_players_local].sort((a,b) => b.score - a.score)[0];
+        document.getElementById("winner_name").innerText = winner?.name || "???";
     }
 }
 

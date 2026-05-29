@@ -3,11 +3,25 @@ const ws_chat = new WebSocket(`wss://localhost:3000/chat`);
 
 function go_to_game(){
     const sendJoin = () => {
-        ws_chat.send("join_allowed");
-        setTimeout(() => location.replace("https://localhost:8080/pr.html"), 100);
+        if (ws_chat.readyState === WebSocket.OPEN) {
+            ws_chat.send("join_allowed");
+            
+            // On désactive le onclose pour éviter les sur-déclenchements de logs
+            ws_chat.onclose = null;
+            
+            // On attend un court instant pour s'assurer que le paquet réseau a quitté le navigateur
+            setTimeout(() => {
+                ws_chat.close();
+                location.replace("https://localhost:8080/pr.html");
+            }, 200);
+        }
     };
-    if (ws_chat.readyState === WebSocket.OPEN) sendJoin();
-    else ws_chat.addEventListener('open', sendJoin, { once: true });
+
+    if (ws_chat.readyState === WebSocket.OPEN) {
+        sendJoin();
+    } else {
+        ws_chat.addEventListener('open', sendJoin, { once: true });
+    }
 }
 
 function settings_done(e){

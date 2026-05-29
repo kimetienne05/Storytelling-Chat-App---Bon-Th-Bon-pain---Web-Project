@@ -112,16 +112,23 @@ async function attemptRefreshToken() {
 }
 
 function start_pr() {
-
-   // envoie au back qu'on cliquer sur le button
-   if (ws.readyState === WebSocket.OPEN) {
-      ws.send("pr_button_click");
-      ws.send("admin_status")
-   }
-   setTimeout( () => {
-      location.replace("https://localhost:8080/pr_settings.html");
-   }, 100);
+   if (ws && ws.readyState === WebSocket.OPEN) {
+      // 1. On prévient le back
+      ws.send("pr_button_click"); 
       
+      console.log("Envoi de start_pr réussi, préparation de la redirection...");
+      
+      // 2. IMPORTANT : On vide l'événement onclose pour éviter la boucle infinie de reconnexions
+      ws.onclose = null; 
+      
+      // 3. On laisse 200ms au message pour s'envoyer avant de changer de page
+      setTimeout(() => {
+         ws.close(); // Ferme proprement
+         location.replace(`https://localhost:8080/pr_settings.html`);
+      }, 200);
+
+   } else {
+      console.warn("Le WebSocket n'est pas connecté. Redirection directe.");
+      location.replace(`https://localhost:8080/pr_settings.html`);
+   }
 }
-
-

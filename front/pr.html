@@ -4,94 +4,107 @@
         <meta charset="UTF-8">
         <title> pr_settings </title>
         <style>
-            .pr{
-                /* permet de ne pas afficher toute les morceaux du jeu d'un coup */
-                display: none; 
+            /* on affiche au début que l'écran d'attente */
+            #waiting_screen {
+                display: flex !important;
             }
-            /* on affiche au début que les settings */
-            #waiting_screen{
-                display: block;
-            }
-
         </style>
         <link rel="stylesheet" href="style.css">
 
     </head>
     <body class="pr-body" >
         <!-- attente des joueurs -->
-        <div class="card">
-        <div id="waiting_screen" class="pr">
-            <h1> On attends tout le monde </h1>
-            <p> Il y a <var id ="player_connected">1</var> joueur(s) de connecté</p>
-            <button onclick="switch_screen('potin_making')"> start </button>
-        </div>
+        <div id="waiting_screen" class="pr waiting-card">
+        <h1>On attend tout le monde 🕐</h1>
+        <p class="player-count"><strong id="player_connected">1</strong> joueur(s) connecté(s)</p>
+        <button onclick="switch_screen('potin_making')">Commencer</button>
         </div>
 
         <!-- preparation des potins de chaque joueurs -->
-         <div class="card">
-         <div id="potin_making" class="pr"> 
-            <h1> choississez vos potins</h1>
-            <div class="quota_counter" id="quota_counter">0 / ? potins soumis</div>
-            <div id="liste_thes_container">
-                <p style="color: gray;">Aucun thé affiché pour le moment. Cliquez sur le bouton.</p>
+        <div id="potin_making" class="pr">
+        <div class="potin-main">
+
+            <div class="potins-existants">
+            <h2>📂 Anciens potins</h2>
+            <div class="potins-scroll-area">
+                <div id="liste_thes_container" class="potins-grid">
+                <p style="color:gray;font-size:.85rem;">Aucun potin pour l'instant.</p>
+                </div>
+                <button class="scroll-arrow" id="scroll_arrow" onclick="toggleScroll()">▼ voir plus</button>
             </div>
-            <p>rajoute autant de potin que tu veux, même s'ils ne seront pas tous vu, tu pourras les retrouver dans tes draft</p>
-            <p>que raconte votre potin</p>
-            <p>titre du potin</p>
-            <input type = "text" id="potin_titre" placeholder="titre_obligatoire" required>
-            <p>raconte nous</p>
-            <input type = "text" id="potin_contenue" placeholder="contenue_obligatoire" required>
-            <p>Date de l'événement (optionnel)</p>
-            <input type="date" id="potin_date_evenement">
-            <input type="radio" name="verite" id="potin_vrai" value="vrai" required>
-            <label for="potin_vrai">Vrai</label>
-            <input type="radio" name="verite" id="potin_faux" value="faux">
-            <label for="potin_faux">Faux</label>
-            <button onclick="add_potin()">ajouter au jeu</button>
-            <button onclick="ready();"> prêt </button>
-         </div>
-         </div>
+            </div>
+
+            <div class="potins-creation">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <h2>✍️ Nouveau potin</h2>
+                <div class="quota-badge" id="quota_counter">0 / ? potins</div>
+            </div>
+            <div class="creation-row">
+                <input type="text" id="potin_titre"    placeholder="Titre (obligatoire)">
+                <input type="text" id="potin_contenue" placeholder="Contenu (obligatoire)">
+            </div>
+            <div class="creation-bottom">
+                <input type="date" id="potin_date_evenement">
+                <div class="radio-group">
+                <label><input type="radio" name="verite" value="vrai"> ✅ Vrai</label>
+                <label><input type="radio" name="verite" value="faux"> ❌ Faux</label>
+                </div>
+                <button onclick="add_potin()" style="background:var(--peach);">Ajouter</button>
+                <button id="btn_ready" onclick="ready()" disabled style="background:var(--mint);">✅ Prêt</button>
+            </div>
+            </div>
+
+        </div>
+        <div class="sidebar" id="sidebar_potin">
+            <h3>👥 Joueurs</h3>
+            <div id="scoreboard_potin"></div>
+        </div>
+        </div>
 
         
-        <div id="guess" class="pr game-layout">
-            <div class="game-main">
-                <h1>À toi de jouer</h1>
-                <div id="timer-bar-container"><div id="timer-bar"></div></div>
-                <p id="titre_guess_label">Le potin : <strong id="titre_guess"></strong></p>
-                <p id="content_guess"></p>
-
-                <p>Qui a balancé ce potin ?</p>
-                <div id="joueurs-boutons"></div>
-
-                <p>C'est vrai ou faux ?</p>
-                <button class="btn-verite" onclick="setVerite(true)" id="btn_vrai">✅ Vrai</button>
+        <div id="guess" class="pr">
+        <div class="guess-main">
+            <div id="timer-bar-container"><div id="timer-bar"></div></div>
+            <div class="potin-display">
+            <div class="potin-title" id="titre_guess"></div>
+            <div class="potin-content" id="content_guess"></div>
+            </div>
+            <div class="guess-actions">
+            <p>Qui a balancé ce potin ?</p>
+            <div id="joueurs-boutons"></div>
+            <p>Vrai ou faux ?</p>
+            <div class="verite-row">
+                <button class="btn-verite" onclick="setVerite(true)"  id="btn_vrai">✅ Vrai</button>
                 <button class="btn-verite" onclick="setVerite(false)" id="btn_faux">❌ Faux</button>
-
-                <button id="btn_confirmer" onclick="confirmerReponse()" disabled>Confirmer mon vote</button>
             </div>
-        <div class="game-sidebar" id="scoreboard"></div>
+            <button id="btn_confirmer" onclick="confirmerReponse()" disabled>Confirmer</button>
+            </div>
+        </div>
+        <div class="sidebar" id="scoreboard"></div>
         </div>
         
 
-        <div class="card">
-        <div id="reveal" class="pr"> 
-            <h1> Et c'est 
-                <span id="auteur_potin" style="color: coral; font-weight: bold;">bidule</span> qui a écrit le potin </h1>
-                <p> Round <var id="current_round">1</var> </p> 
-                <button id="btn_confirm_reveal" onclick="loop('guess','results')"> Round Suivant  </button> 
+        <div id="reveal" class="pr">
+        <div class="reveal-main">
+            <h1>Et c'est…</h1>
+            <div class="reveal-auteur" id="auteur_potin">???</div>
+            <p style="color:var(--muted);">qui a écrit le potin · Round <strong id="current_round">1</strong></p>
+            <button id="btn_confirm_reveal" onclick="loop('guess','results')">Round suivant ➡️</button>
         </div>
+        <div class="sidebar" id="scoreboard_reveal"></div>
         </div>
-
 
 
         <!-- resulats partie -->
-         <div class="card">
-         <div id="results" class="pr"> 
-            <h1> ET LE GAGNANT EST </h1>
-            <button onclick="definitive_add()"> retour au chat </button> 
-            <!-- rajouter un truc qui permet de retournet au chat -->
-         </div>
-         </div>
+        <div id="results" class="pr">
+        <div class="results-inner">
+            <div class="winner-trophy">🏆</div>
+            <h1>Et le gagnant est</h1>
+            <div class="winner-name" id="winner_name">???</div>
+            <button onclick="definitive_add()" style="background:var(--lavender);margin-top:16px;">
+            Retour au chat 💬
+            </button>
+        </div>
         <script src = "pr.js" defer></script>
     </body>
 </html>

@@ -453,21 +453,23 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
          if (current_username !== adminPartieUser) return;
 
          if (potin_pool.length === 0) {
-            // Plus de potins, on siffle la fin de la récré
+            const res = await db.execute("SELECT * FROM PotinsPartie");
+            potin_pool = Array.isArray(res.rows) ? [...res.rows] : Object.values(res.rows || {});
+         }
+         if (potin_pool.length === 0) {
             const endMsg = JSON.stringify({ action: "change_screen", screen: "results" });
             for (const c of connections) {
-               if (c.readyState === WebSocket.OPEN) c.send(endMsg);
+                  if (c.readyState === WebSocket.OPEN) c.send(endMsg);
             }
             return;
          }
-
          const i = Math.floor(Math.random() * potin_pool.length);
          const potin = potin_pool.splice(i, 1)[0];
          
          // On distribue le MEME potin à TOUT LE MONDE
          const msg = JSON.stringify({ action: "show_potin", potin });
-         for (const c of connections) {
-            if (c.readyState === WebSocket.OPEN) c.send(msg);
+         for (const [, p] of game_players) {
+            if (p.ws.readyState === WebSocket.OPEN) p.ws.send(msg);
          }
          current_potin = potin;
          round_answers = new Map(); // reset les réponses du round
