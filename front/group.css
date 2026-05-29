@@ -1,7 +1,6 @@
-body{
+html, body{
+    height: 100%;
     margin: 0;
-    background-color: white;
-    font-family: Arial, sans-serif;
 }
 
 /* TITRE */
@@ -91,6 +90,7 @@ body{
     flex-direction: column;
 }
 
+
 /* BOULANGERIE */
 
 .boulangerie{
@@ -104,16 +104,52 @@ body{
 }
 
 /* CHAT */
-
-.chat{
-    height: 66.66%;
-
-    padding: 10px;
-
-    box-sizing: border-box;
-
-    overflow-y: auto;
+.chat {
+    display: flex;
+    flex-direction: column;
+    height: 500px;
 }
+
+#chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid black;
+    padding: 10px;
+    background: white;
+}
+
+.chatInputBox {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#chatInput {
+    flex: 1;
+}
+#chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid black;
+    padding: 10px;
+    background: white;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid black;
+    padding: 10px;
+    background: white;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 #popup{
     display: none;
 
@@ -124,6 +160,7 @@ body{
 
     width: 100%;
     height: 100%;
+    padding-bottom: 10px;
 
     background-color: rgba(0,0,0,0.5);
 }

@@ -13,7 +13,11 @@ ws.onmessage = (event) => {
     const chatBox = document.getElementById("chatMessages");
 
     const div = document.createElement("div");
-    div.textContent = data.message;
+
+    div.className = "chatMessage";
+
+    div.textContent =
+        `${data.username} : ${data.message}`;
 
     chatBox.appendChild(div);
 
@@ -177,6 +181,36 @@ function SendMessage() {
 
     input.value = "";
 }
+async function LoadMessages() {
+
+    const response = await fetch(
+        `https://localhost:3000/messages/${groupId}`,
+        {
+            credentials: "include"
+        }
+    );
+
+    const messages = await response.json();
+
+    const chatBox = document.getElementById("chatMessages");
+
+    chatBox.innerHTML = "";
+
+    for (const msg of messages) {
+
+        const div = document.createElement("div");
+
+        div.className = "chatMessage";
+
+        div.textContent =
+            `${msg.userName} : ${msg.content}`;
+
+        chatBox.appendChild(div);
+    }
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+LoadMessages();
 LoadUsers();
 loadGroup();
 LoadMembers();

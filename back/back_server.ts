@@ -328,44 +328,68 @@ if (Deno.args.length < 1) {
    Deno.exit();
 }
 
-router.get("/chat", authorizationMiddleware, (ctx) => {
-   if (!ctx.isUpgradable) {
-   ctx.throw(501);
-   }
-   const ws = ctx.upgrade();
+router.get("/chat",authorizationMiddleware,userMiddleware,(ctx) => {
+    if (!ctx.isUpgradable) {
+      ctx.throw(501);
+    }
 
-   ws.onopen = function() {
-   console.log('WebSocket connection established.');
-   connections.push(ws);
-   };
+    const ws = ctx.upgrade();
 
-   ws.onerror = (error) => {
-   console.log(`Error: ${error}`);
-   };
+    const user = ctx.state.user;
 
-   ws.onclose = () => {
-   console.log("Websocket closed");
-   };
+    ws.onopen = () => {
+      console.log("WebSocket connection established.");
 
-      ws.onmessage = async (event) => {
+      connections.push({ws,userName: user.userName,idUser: user.idUser});
+    };
 
-         const data = JSON.parse(event.data);
+    ws.onerror = (error) => {
+      console.log("Error:", error);
+    };
 
-         if (data.type !== "chat:message") return;
+    ws.onclose = () => {
+      console.log("WebSocket closed");
 
-         const username = ctx.state.tokenData.userName;
+      // supprimer la connexion
+      const index = connections.findIndex(c => c.ws === ws);
+      if (index !== -1) connections.splice(index, 1);
+    };
 
-         for (const client of connections) {
-            client.send(
-                  JSON.stringify({
-                     type: "chat:message",
-                     groupId: data.groupId,
-                     message: `${username} : ${data.message}`
-                  })
-            );
-         }
-      };
-});
+    ws.onmessage = async (event) => {
+
+      const data = JSON.parse(event.data);
+
+      if (data.type !== "chat:message") return;
+
+      const sender = ctx.state.user;
+
+      // sauvegarde message
+      await db.execute(
+        `
+        INSERT INTO Message(content, idUser, idGroup)
+        VALUES (?, ?, ?)
+        `,
+        [
+          data.message,
+          sender.idUser,
+          data.groupId
+        ]
+      );
+
+      // broadcast
+      for (const client of connections) {
+
+        client.ws.send(JSON.stringify({
+          type: "chat:message",
+          groupId: data.groupId,
+          username: sender.userName,
+          message: data.message
+        }));
+      }
+    };
+  }
+);
+
 router.post("/addgroup", authorizationMiddleware, async (ctx) => {
 
    const body = await ctx.request.body.json();
@@ -632,6 +656,29 @@ router.post("/group/leave", authorizationMiddleware, userMiddleware, async (ctx)
         message: "Groupe quitté"
     };
 });
+
+router.get(
+    "/messages/:id",
+    authorizationMiddleware,
+    async (ctx) => {
+
+        const groupId = ctx.params.id;
+
+        const res = await db.execute(`
+            SELECT
+                Message.content,
+                Message.sendDate,
+                User.userName
+            FROM Message
+            JOIN User
+                ON Message.idUser = User.idUser
+            WHERE Message.idGroup = ?
+            ORDER BY Message.sendDate ASC
+        `, [groupId]);
+
+        ctx.response.body = res.rows;
+    }
+);
 console.log(`Oak back server running on port ${Deno.args[0]}`);
 
 app.use(router.routes());
