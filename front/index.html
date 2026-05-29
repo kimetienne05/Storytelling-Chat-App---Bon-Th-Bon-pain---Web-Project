@@ -9,11 +9,14 @@
     </script>
     </head>
     <body class="chat">
-        <button onclick="start_pr()" id = "button_start"> Potin Roulette ? </button>
+        <!-- <button onclick="start_pr()" id = "button_start" class="btn-image-roulette"> 
+            <img src="illustration/bouton_pr.png" alt="Lancer la roulette des potins" class="img-roulette">
+        </button> -->
+        <img src="bouton_pr.png" id="button_start" onclick="start_pr()" alt="Potin Roulette" style="cursor: pointer;" width="200">
     <form id="send" class="row_container">
         <input type="text" id= "new_message" class="new_message" placeholder="Ton message ici">
         <button type="submit">Send</button>
-        
+
     </form>
     <div id="chatbox"></div>
     </body>

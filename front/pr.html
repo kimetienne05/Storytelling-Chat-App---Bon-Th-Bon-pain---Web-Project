@@ -17,17 +17,21 @@
         <link rel="stylesheet" href="style.css">
 
     </head>
-    <body >
+    <body class="pr-body" >
         <!-- attente des joueurs -->
+        <div class="card">
         <div id="waiting_screen" class="pr">
             <h1> On attends tout le monde </h1>
             <p> Il y a <var id ="player_connected">1</var> joueur(s) de connecté</p>
             <button onclick="switch_screen('potin_making')"> start </button>
         </div>
+        </div>
 
         <!-- preparation des potins de chaque joueurs -->
+         <div class="card">
          <div id="potin_making" class="pr"> 
             <h1> choississez vos potins</h1>
+            <div class="quota_counter" id="quota_counter">0 / ? potins soumis</div>
             <div id="liste_thes_container">
                 <p style="color: gray;">Aucun thé affiché pour le moment. Cliquez sur le bouton.</p>
             </div>
@@ -46,8 +50,9 @@
             <button onclick="add_potin()">ajouter au jeu</button>
             <button onclick="ready();"> prêt </button>
          </div>
+         </div>
 
-
+        
         <div id="guess" class="pr game-layout">
             <div class="game-main">
                 <h1>À toi de jouer</h1>
@@ -66,21 +71,26 @@
             </div>
         <div class="game-sidebar" id="scoreboard"></div>
         </div>
+        
 
+        <div class="card">
         <div id="reveal" class="pr"> 
             <h1> Et c'est 
                 <span id="auteur_potin" style="color: coral; font-weight: bold;">bidule</span> qui a écrit le potin </h1>
                 <p> Round <var id="current_round">1</var> </p> 
                 <button id="btn_confirm_reveal" onclick="loop('guess','results')"> Round Suivant  </button> 
         </div>
+        </div>
 
 
 
         <!-- resulats partie -->
+         <div class="card">
          <div id="results" class="pr"> 
             <h1> ET LE GAGNANT EST </h1>
             <button onclick="definitive_add()"> retour au chat </button> 
             <!-- rajouter un truc qui permet de retournet au chat -->
+         </div>
          </div>
         <script src = "pr.js" defer></script>
     </body>

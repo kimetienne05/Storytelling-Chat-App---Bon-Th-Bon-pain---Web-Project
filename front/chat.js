@@ -46,9 +46,11 @@ async function connectWebSocket (){
     if (event.data === "block_temp_for_all"){
       const start_button = document.getElementById("button_start");
       if (start_button){
-          start_button.disabled = true;
-          start_button.innerText = "une partie est en préparation"
-          console.log('button disabled');
+          // start_button.disabled = true;
+          // start_button.innerText = "une partie est en préparation"
+        start_button.style.pointerEvents = "none";   // désactive le clic
+        start_button.style.opacity = "0.4";          // feedback visuel
+        start_button.title = "Une partie est en préparation"; // tooltip
       }
     }if(event.data === "all_join_pr"){
       const join_button = document.createElement('button');

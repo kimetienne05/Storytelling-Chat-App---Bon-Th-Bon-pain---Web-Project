@@ -9,6 +9,10 @@ let jeSuisAdminPartie = false;
 let selected_auteur = null;
 let selected_verite = null;
 let timer_interval = null;
+
+let quota_potins = 0;
+let potins_soumis =0;
+
 ws.onopen = function (){
     console.log("new player joined");
     ws.send("add_new_player");
@@ -29,6 +33,8 @@ ws.onmessage = function(event){
         
         if (settings_from_back.action == "current pr settings") { 
             nb_round = settings_from_back.donnees.nbp; 
+            quota_potins = Number(msg.donnees.nbp);
+            updateQuotaDisplay();
             prep_time_limit = settings_from_back.donnees.prtime; 
             round_time_limit = settings_from_back.donnees.rtime; 
             
@@ -133,7 +139,7 @@ function loop(last_screen,results){
    
     const maxRounds = parseInt(nb_round, 10) || 3; // conversion en entier parce que ça bug 
 
-    if (round_actuel <= maxRounds) {
+    if (round_actuel < maxRounds) {
         round_actuel++;
         
         const roundDoc = document.getElementById("current_round");
@@ -201,6 +207,8 @@ function add_potin(){
     document.getElementById("potin_contenue").value=""
     document.querySelectorAll('input[name="verite"]').forEach(r => r.checked = false);
     document.getElementById("potin_date_evenement").value=""
+    potins_soumis++;
+    updateQuotaDisplay();
 }
 
 function display_potin() {
@@ -228,7 +236,8 @@ async function add_old_tea(tab){
         "eventDate": eventDate
         }),
         });
-        
+        potins_soumis++;
+        updateQuotaDisplay();
     }catch(error) {
         console.error('Fetch error:', error);
         alert("ajout potin échoué! kim triste");
@@ -278,7 +287,7 @@ function confirmerReponse() {
    }));
    // Désactiver après envoi pour éviter double vote
    document.getElementById("btn_confirmer").disabled = true;
-   document.querySelectorAll(".joueur-btn, .btn-verite").forEach(b => b.disabled = true);
+   document.querySelectorAll(".joueur-btn").forEach(b => b.disabled = true);
 }
 
 function updateScoreboard(players) {
@@ -305,11 +314,17 @@ function startTimer(seconds) {
    }, 1000);
 }
 function resetSelections() {
-   selected_auteur = null;
    selected_verite = null;
    document.querySelectorAll(".joueur-btn, .btn-verite").forEach(b => {
       b.classList.remove("selected");
       b.disabled = false;
    });
    updateConfirmerBtn();
+}
+
+function updateQuotaDisplay() {
+    const el = document.getElementById("quota_counter");
+    if (el) el.textContent = `${potins_soumis} / ${quota_potins} potins soumis`;
+    const btn = document.getElementById("btn_ready");
+    if (btn) btn.disabled = potins_soumis < quota_potins;
 }
