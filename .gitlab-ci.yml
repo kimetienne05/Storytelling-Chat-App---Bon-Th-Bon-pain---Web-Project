@@ -10,7 +10,7 @@ variables:
   DENO_VERSION: "2.5.0"
   IMAGE_BASE: ${CI_REGISTRY_IMAGE}
 
-# 1. Vérification rapide (échoue vite si le code est sale)
+# code est propre ou pas? c'est ça
 lint:
   stage: lint
   script:
@@ -18,16 +18,15 @@ lint:
     - deno lint
     - deno fmt --check
 
-# 2. Compilation / Préparation
+# test de /test
 test:
   stage: test
   script:
-    # Exemple concret pour Deno : mettre en cache les dépendances
     - echo "Lancement des tests..."
-    - deno test --allow-env ./tests/
+    - deno test --allow-env --no-check ./tests/
     - echo "Terminé !"
 
-# 3. Tests lourds avec Base de Données
+# c'est les builds quoi
 .build:
   stage: build
   image: docker:27

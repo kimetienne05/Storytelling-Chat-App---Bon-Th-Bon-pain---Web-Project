@@ -82,6 +82,25 @@ const secretKey = await crypto.subtle.importKey(
 
 const connections: WebSocket[] = [];
 
+//pour inscription
+function strcmp(a: string, b: string) {
+  if (a.toString() < b.toString()) return -1;
+  if (a.toString() > b.toString()) return 1;
+  return 0;
+}
+
+
+function goodUsername(name: string): string {
+  if (name.length > 50) {
+    return "Name est trop long";
+  }
+  if (/(Kim|Emie|Aanor)/.test(name)) {
+    return "Name contient un des noms sacrés";
+  }
+  return "";
+}
+
+
 // routes
 
 router.get("/", (ctx) => {
@@ -266,6 +285,14 @@ router.post("/inscription", async (ctx) => {
     console.log("existe deja ");
     return;
   }
+  const ResUserNameTest = goodUsername(name);
+  if (strcmp(ResUserNameTest,"") == 1){
+    ctx.response.status = 406;
+    ctx.response.body = { error: ResUserNameTest };
+    console.log("Vous avez violez les lois des Usernames et serez executés demain à midi");
+    return;
+  }
+
   const pass_hash = await get_hash(passwd);
 
   await db.execute(
