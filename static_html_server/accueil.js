@@ -73,46 +73,63 @@ async function AddGroup(){
 
     bouton.textContent = nom;
 
-    bouton.onclick = function(){
-
-        alert("Tu as cliqué sur " + nom);
-
+    bouton.onclick = function () {
+        window.location.href =
+            "group.html?id=" + groups[i].idGroup + "&name=" + groups[i].groupName;;
     };
 
-    document.querySelector(".groupe").appendChild(bouton);
+    document.getElementById("groupList").appendChild(bouton);
 
     // fermer popup
     document.getElementById("popup").style.display = "none";
 }
-
 async function LoadGroups(){
 
-    const response = await fetch("https://localhost:3000/groups", {
+    try {
 
-        method: "GET",
+        const response = await fetch("https://localhost:3000/groups", {
+            method: "GET",
+            credentials: "include"
+        });
 
-        credentials: "include"
+        if(!response.ok){
+            console.log("Erreur :", response.status);
+            return;
+        }
 
-    });
+        const groups = await response.json();
 
-    const groups = await response.json();
+        const container = document.getElementById("groupList");
 
-    for(let i = 0; i < groups.length; i++){
+        if(!container){
+            console.log("groupList introuvable");
+            return;
+        }
 
-        let bouton = document.createElement("button");
+        container.innerHTML = "";
 
-        bouton.textContent = groups[i].groupName;
+        for(let i = 0; i < groups.length; i++){
 
-        bouton.onclick = function(){
+            let bouton = document.createElement("button");
 
-            alert(groups[i].groupName);
+            bouton.textContent = groups[i].groupName;
 
-        };
+            bouton.onclick = function(){
 
-        document.querySelector(".groupe").appendChild(bouton);
+                window.location.href =
+                    "group.html?id=" + groups[i].idGroup;
+
+            };
+
+            container.appendChild(bouton);
+        }
+
+    } catch(error){
+
+        console.log("Erreur LoadGroups :", error);
+
     }
 }
-
 function DisplayUsers(users){
 
     let userList = document.getElementById("userList");
@@ -146,31 +163,26 @@ function FilterUsers(){
     );
 
     DisplayUsers(filtered);
-}
-
-async function LoadInvitations(){
+}async function LoadInvitations() {
 
     const response = await fetch(
         "https://localhost:3000/invitations",
         {
-
-            method: "GET",
-
             credentials: "include"
-
         }
     );
 
     const invitations = await response.json();
 
-    let left = document.querySelector(".left");
+    const container = document.getElementById("invitationList");
 
-    for(let i = 0; i < invitations.length; i++){
+    container.innerHTML = "";
+
+    for (let i = 0; i < invitations.length; i++) {
 
         let div = document.createElement("div");
 
         div.innerHTML = `
-
             <p>${invitations[i].groupName}</p>
 
             <button onclick="HandleInvitation(${invitations[i].idGroup}, 'accept')">
@@ -184,7 +196,7 @@ async function LoadInvitations(){
             <hr>
         `;
 
-        left.appendChild(div);
+        container.appendChild(div);
     }
 }
 async function HandleInvitation(idGroup, action){
@@ -227,26 +239,14 @@ async function Logout(){
     window.location.href = "login.html";
 }
 
-LoadGroups();
-LoadInvitations();
-LoadUsers();
-
-// refresh automatique invitations
-setInterval(() => {
-
-    document.querySelector(".left").innerHTML =
-        "<h2>Invitation</h2>";
-
-    LoadInvitations();
-
-}, 3000);
-
-// refresh automatique groupes
-setInterval(() => {
-
-    document.querySelector(".groupe").innerHTML =
-        "<h2>Liste des groupes</h2>";
+window.onload = () => {
 
     LoadGroups();
+    LoadUsers();
 
-}, 3000);
+    LoadInvitations(); // première charge
+
+    setInterval(() => {
+        LoadInvitations();
+    }, 3000); // toutes les 3 secondes
+};
