@@ -6,3 +6,8 @@ repos:
         language: system
         entry: deno fmt
         types: [file]
+      - id: deno-lint
+        name: test lint
+        language: system
+        entry: deno lint back/back_server.ts && deno lint front/front_server.ts && deno lint front/front_server.ts && deno lint front/chat.js
+        types: [file]
