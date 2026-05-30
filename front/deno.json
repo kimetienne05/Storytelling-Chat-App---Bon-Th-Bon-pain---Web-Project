@@ -4,7 +4,7 @@
     "pg": "npm:pg@^8.20.0"
   },
   "tasks":{
-    "build": "mkdir -p dist && cp index.html login.html pr.html pr_settings.html style.css login.js chat.js pr.js pr_settings.js bouton_pr.png dist/",
+    "build": "mkdir -p dist && cp index.html login.html pr.html pr_settings.html style.css login.js chat.js pr.js pr_settings.js bouton_pr.png accueil.js accueil.css accueil.html group.css group.html group.js ./dist",
     "start" : "deno run --allow-net --allow-read front_server.ts 8080 "
   }
 }

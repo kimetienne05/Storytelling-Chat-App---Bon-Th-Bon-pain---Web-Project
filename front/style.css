@@ -649,3 +649,122 @@ body.settings-body {
   border-radius: 50px;
   width: 100%;
 }
+body{
+    margin: 0;
+    background-color: white;
+}
+
+.container{
+    width: 100%;
+    height: 100vh;
+
+    border: 2px solid black;
+}
+
+/* HEADER */
+
+.header{
+    height: 60px;
+
+    border-bottom: 2px solid black;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 10px;
+}
+
+/* CONTENU */
+
+.main{
+    display: flex;
+
+    height: calc(100vh - 60px);
+}
+
+/* INVITATION */
+
+.left{
+    width: 200px;
+
+    border-right: 2px solid black;
+
+    padding: 10px;
+}
+
+/* GROUPES */
+
+.groupe{
+    flex: 1;
+
+    padding: 10px;
+}
+
+#popup{
+    display: none;
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background-color: rgba(0,0,0,0.5);
+}
+
+#popupouvert{
+    background-color: white;
+
+    width: 300px;
+
+    padding: 20px;
+
+    margin: 200px auto;
+
+    text-align: center;
+}
+.groupe button{
+
+    width: 100%;
+
+    padding: 15px;
+
+    margin-top: 10px;
+
+    text-align: left;
+
+    font-size: 18px;
+
+    border: none;
+
+    border-bottom: 1px solid gray;
+
+    background-color: white;
+
+    cursor: pointer;
+}
+.groupe button:hover{
+
+    background-color: #f0f0f0;
+}
+
+#userList{
+
+    height: 150px;
+
+    overflow-y: scroll;
+
+    border: 1px solid gray;
+
+    padding: 5px;
+
+    text-align: left;
+}
+
+.userItem{
+
+    margin-top: 5px;
+}

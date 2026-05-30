@@ -1,5 +1,5 @@
 
-const ws_chat = new WebSocket(`wss://localhost:3000/chat`);
+const ws_chat = new WebSocket(`wss://localhost:3000/start_pr`);
 
 function go_to_game(){
     const sendJoin = () => {
