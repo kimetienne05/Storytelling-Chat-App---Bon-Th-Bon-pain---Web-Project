@@ -3,7 +3,12 @@
     "mysql": "npm:mysql@^2.18.1",
     "pg": "npm:pg@^8.20.0"
   },
-  "tasks":{
-    "start" : "deno run --allow-env --allow-read --allow-net back_server.ts 3000"
+  "tasks": {
+    "start": "deno run --allow-env --allow-read --allow-net back_server.ts 3000"
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-import-prefix"]
+    }
   }
 }
