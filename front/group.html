@@ -8,7 +8,7 @@
   </head>
   <body>
     <div class="title">
-      <button onclick="Accueil();">Accueil</button>
+      <button onclick="_Accueil();">Accueil</button>
       <h1 id="groupTitle"></h1>
     </div>
     <div class="main">
@@ -22,8 +22,8 @@
         <div class="groupe">
           <h2>Gestion du groupe</h2>
           <div>
-            <button onclick="CreePopup()">+ Inviter</button>
-            <button onclick="QuitGroup()">Quitter</button>
+            <button onclick="_CreePopup()">+ Inviter</button>
+            <button onclick="_QuitGroup()">Quitter</button>
           </div>
           <div class="members">
             <h3>Membres du groupe</h3>
@@ -50,7 +50,7 @@
               placeholder="Votre message..."
             >
 
-            <button onclick="SendMessage()">
+            <button onclick="_SendMessage()">
               Envoyer
             </button>
           </div>
@@ -65,14 +65,14 @@
           id="searchUser"
           type="text"
           placeholder="Rechercher un utilisateur"
-          onkeyup="FilterUsers()"
+          onkeyup="_FilterUsers()"
         >
 
         <div id="userList"></div>
 
         <br>
 
-        <button onclick="InviteUsers()">Inviter</button>
+        <button onclick="_InviteUsers()">Inviter</button>
         <button onclick="FermerPopup()">Fermer</button>
       </div>
     </div>

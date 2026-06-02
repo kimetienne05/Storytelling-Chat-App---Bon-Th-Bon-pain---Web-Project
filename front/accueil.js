@@ -158,13 +158,13 @@ async function LoadInvitations() {
     div.innerHTML = `
             <p>${invitations[i].groupName}</p>
 
-            <button onclick="HandleInvitation(${
+            <button onclick="_HandleInvitation(${
       invitations[i].idGroup
     }, 'accept')">
                 Accepter
             </button>
 
-            <button onclick="HandleInvitation(${
+            <button onclick="_HandleInvitation(${
       invitations[i].idGroup
     }, 'refuse')">
                 Refuser

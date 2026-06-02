@@ -12,11 +12,11 @@
     <div class="container">
       <!-- HEADER -->
       <div class="header">
-        <button onclick="Logout()">Déconnexion</button>
+        <button onclick="_Logout()">Déconnexion</button>
 
         <h1>Bon Thé Bon Pain</h1>
 
-        <button onclick="CreeGroup()">+</button>
+        <button onclick="_CreeGroup()">+</button>
       </div>
 
       <!-- CONTENU -->
@@ -47,16 +47,16 @@
           id="searchUser"
           type="text"
           placeholder="Rechercher un utilisateur"
-          onkeyup="FilterUsers()"
+          onkeyup="_FilterUsers()"
         >
 
         <div id="userList"></div>
 
         <br>
 
-        <button onclick="AddGroup()">Créer le groupe</button>
+        <button onclick="_AddGroup()">Créer le groupe</button>
 
-        <button onclick="FermerPopup()">Fermer</button>
+        <button onclick="_FermerPopup()">Fermer</button>
       </div>
     </div>
   </body>
