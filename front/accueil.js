@@ -92,7 +92,7 @@ async function LoadGroups() {
 
     container.innerHTML = "";
 
-    for (const i = 0; i < groups.length; i++) {
+    for (let i = 0; i < groups.length; i++) {
       const bouton = document.createElement("button");
 
       bouton.textContent = groups[i].groupName;
@@ -152,7 +152,7 @@ async function LoadInvitations() {
 
   container.innerHTML = "";
 
-  for (const i = 0; i < invitations.length; i++) {
+  for (let i = 0; i < invitations.length; i++) {
     const div = document.createElement("div");
 
     div.innerHTML = `
