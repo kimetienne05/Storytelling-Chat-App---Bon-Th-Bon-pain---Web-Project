@@ -21,8 +21,8 @@ function _searchUser(isadmin) {
       return response.json();
     })
     .then((data) => {
-      console.log("New Post created:", data);
-      location.replace(`https://localhost:8080/index.html`);
+        console.log('New Post created:', data);
+        location.replace("https://localhost:8080/accueil.html");
     })
     .catch((error) => {
       console.error("Fetch error:", error);
@@ -71,12 +71,12 @@ function _inscription() {
       return response.json();
     })
     .then((data) => {
-      console.log("New Post created:", data);
-      alert("Inscription réussi!");
-      location.replace(`https://localhost:8080/index.html`);
+    console.log('New Post created:', data);
+        alert("Inscription réussi!");
+        location.replace("https://localhost:8080/accueil.html");
     })
     .catch((error) => {
-      console.error("Fetch error:", error);
-      alert("Inscription échoué!");
+        console.error('Fetch error:', error);
+        alert("Inscription échoué!");
     });
 }

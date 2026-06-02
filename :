@@ -1,0 +1,46 @@
+Merge remote-tracking branch 'origin/main' into Groupe
+
+# Conflicts:
+#	front/groupe.html
+#	front/groupe.js
+#
+# It looks like you may be committing a merge.
+# If this is not correct, please run
+#	git update-ref -d MERGE_HEAD
+# and try again.
+
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Committer: Gaillot-Thelohan Aanor <gaillot-thelohanaanor@MacBook-Air-de-Gaillot-Thelohan.local>
+#
+# On branch Groupe
+# Your branch and 'origin/login' have diverged,
+# and have 1 and 1 different commits each, respectively.
+#
+# All conflicts fixed but you are still merging.
+#
+# Changes to be committed:
+#	new file:   .dockerignore
+#	modified:   .envEXEMPLE
+#	new file:   back/Dockerfile
+#	renamed:    back_server.ts -> back/back_server.ts
+#	new file:   back/deno.json
+#	new file:   compose.yaml
+#	new file:   dockerfile_explication.txt
+#	new file:   front/Dockerfile
+#	new file:   front/chat.js
+#	new file:   front/deno.json
+#	renamed:    static_html_server/front_server.ts -> front/front_server.ts
+#	renamed:    static_html_server/groupe.html -> front/groupe.html
+#	renamed:    static_html_server/groupe.js -> front/groupe.js
+#	renamed:    static_html_server/index.html -> front/index.html
+#	renamed:    static_html_server/login.html -> front/login.html
+#	renamed:    static_html_server/login.js -> front/login.js
+#	renamed:    static_html_server/style.css -> front/style.css
+#	deleted:    static_html_server/chat.js
+#
+# Untracked files:
+#	static_html_server/
+#
