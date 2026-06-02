@@ -5,261 +5,242 @@ const ws = new WebSocket("wss://localhost:3000/chat");
 const gws = new WebSocket("wss://localhost:3000/start_pr");
 
 ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
 
-    const data = JSON.parse(event.data);
+  if (data.type !== "chat:message") return;
 
-    if (data.type !== "chat:message") return;
+  if (data.groupId != groupId) return;
 
-    if (data.groupId != groupId) return;
+  const chatBox = document.getElementById("chatMessages");
 
-    const chatBox = document.getElementById("chatMessages");
+  const div = document.createElement("div");
 
-    const div = document.createElement("div");
+  div.className = "chatMessage";
 
-    div.className = "chatMessage";
+  div.textContent = `${data.username} : ${data.message}`;
 
-    div.textContent =
-        `${data.username} : ${data.message}`;
+  chatBox.appendChild(div);
 
-    chatBox.appendChild(div);
-
-    chatBox.scrollTop = chatBox.scrollHeight;
-
+  chatBox.scrollTop = chatBox.scrollHeight;
 };
 
-gws.onmessage = function(event){
-    try{
-        if (event.data === "block_temp_for_all"){
-        const start_button = document.getElementById("button_start");
-        if (start_button){
-            // start_button.disabled = true;
-            // start_button.innerText = "une partie est en préparation"
-            start_button.style.pointerEvents = "none";   // désactive le clic
-            start_button.style.opacity = "0.4";          // feedback visuel
-            start_button.title = "Une partie est en préparation"; // tooltip
-        }
-        }if(event.data === "all_join_pr"){
-        const join_button = document.createElement('button');
-        join_button.innerText = "Rejoindre la partie";
-        join_button.onclick = function() {
-            location.replace("https://localhost:8080/pr.html");
-        };      
-        }else {
-        const message = document.createElement('div');
-        message.textContent = event.data;
-        document.getElementById('chatbox').appendChild(message);
-        }
+gws.onmessage = function (event) {
+  try {
+    if (event.data === "block_temp_for_all") {
+      const start_button = document.getElementById("button_start");
+      if (start_button) {
+        // start_button.disabled = true;
+        // start_button.innerText = "une partie est en préparation"
+        start_button.style.pointerEvents = "none"; // désactive le clic
+        start_button.style.opacity = "0.4"; // feedback visuel
+        start_button.title = "Une partie est en préparation"; // tooltip
+      }
     }
-    catch{
-        console.error("Erreur réseau:", error);
-        return false;
+    if (event.data === "all_join_pr") {
+      const join_button = document.createElement("button");
+      join_button.innerText = "Rejoindre la partie";
+      join_button.onclick = function () {
+        location.replace("https://localhost:8080/pr.html");
+      };
+    } else {
+      const message = document.createElement("div");
+      message.textContent = event.data;
+      document.getElementById("chatbox").appendChild(message);
     }
-}
-async function loadGroup(){
+  } catch {
+    console.error("Erreur réseau:", error);
+    return false;
+  }
+};
+async function loadGroup() {
+  const response = await fetch("https://localhost:3000/groups", {
+    credentials: "include",
+  });
 
-    const response = await fetch("https://localhost:3000/groups", {
-        credentials: "include"
-    });
+  const groups = await response.json();
 
-    const groups = await response.json();
+  const group = groups.find((g) => g.idGroup == groupId);
 
-    const group = groups.find(g => g.idGroup == groupId);
-
-    if(group){
-        document.getElementById("groupTitle").textContent = group.groupName;
-    }
+  if (group) {
+    document.getElementById("groupTitle").textContent = group.groupName;
+  }
 }
 
 loadGroup();
 
-async function Accueil(){
-    window.location.href = "accueil.html";
+async function Accueil() {
+  window.location.href = "accueil.html";
 }
-function CreePopup(){
-    console.log("popup ouvert");
-    document.getElementById("popup").style.display = "block";
-    LoadUsers();
+function CreePopup() {
+  console.log("popup ouvert");
+  document.getElementById("popup").style.display = "block";
+  LoadUsers();
 }
-async function LoadUsers(){
+async function LoadUsers() {
+  const response = await fetch(
+    `https://localhost:3000/group/usersnotin/${groupId}`,
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
 
-    const response = await fetch(
-        `https://localhost:3000/group/usersnotin/${groupId}`,
-        {
-            method: "GET",
-            credentials: "include"
-        }
-    );
+  allUsers = await response.json();
 
-    allUsers = await response.json();
-
-    DisplayUsers(allUsers);
+  DisplayUsers(allUsers);
 }
-function FermerPopup(){
-
-    document.getElementById("popup").style.display = "none";
-
+function FermerPopup() {
+  document.getElementById("popup").style.display = "none";
 }
 async function InviteUsers() {
+  let checkedUsers = document.querySelectorAll("#userList input:checked");
 
-    let checkedUsers = document.querySelectorAll("#userList input:checked");
+  let invitedUsers = [];
 
-    let invitedUsers = [];
+  checkedUsers.forEach((u) => {
+    invitedUsers.push(u.value);
+  });
 
-    checkedUsers.forEach(u => {
-        invitedUsers.push(u.value);
-    });
+  await fetch("https://localhost:3000/invite", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      groupId: groupId,
+      users: invitedUsers,
+    }),
+  });
 
-    await fetch("https://localhost:3000/invite", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            groupId: groupId,
-            users: invitedUsers
-        })
-    });
-
-    FermerPopup();
+  FermerPopup();
 }
 
-function DisplayUsers(users){
+function DisplayUsers(users) {
+  let userList = document.getElementById("userList");
 
-    let userList = document.getElementById("userList");
+  userList.innerHTML = "";
 
-    userList.innerHTML = "";
+  for (let i = 0; i < users.length; i++) {
+    let div = document.createElement("div");
 
-    for(let i = 0; i < users.length; i++){
+    div.className = "userItem";
 
-        let div = document.createElement("div");
-
-        div.className = "userItem";
-
-        div.innerHTML = `
+    div.innerHTML = `
             <input type="checkbox" value="${users[i].idUser}">
             ${users[i].userName}
         `;
 
-        userList.appendChild(div);
-    }
+    userList.appendChild(div);
+  }
 }
 
-function FilterUsers(){
+function FilterUsers() {
+  let search = document
+    .getElementById("searchUser")
+    .value
+    .toLowerCase();
 
-    let search = document
-        .getElementById("searchUser")
-        .value
-        .toLowerCase();
+  let filtered = allUsers.filter((user) =>
+    user.userName.toLowerCase().includes(search)
+  );
 
-    let filtered = allUsers.filter(user =>
-        user.userName.toLowerCase().includes(search)
-    );
-
-    DisplayUsers(filtered);
+  DisplayUsers(filtered);
 }
-async function LoadMembers(){
+async function LoadMembers() {
+  const params = new URLSearchParams(window.location.search);
+  const groupId = params.get("id");
 
-    const params = new URLSearchParams(window.location.search);
-    const groupId = params.get("id");
+  const response = await fetch(
+    `https://localhost:3000/group/members/${groupId}`,
+    { credentials: "include" },
+  );
 
-    const response = await fetch(
-        `https://localhost:3000/group/members/${groupId}`,
-        { credentials: "include" }
-    );
+  const members = await response.json();
 
-    const members = await response.json();
+  const container = document.getElementById("memberList");
 
-    const container = document.getElementById("memberList");
+  container.innerHTML = "";
 
-    container.innerHTML = "";
+  for (let m of members) {
+    let div = document.createElement("div");
+    div.textContent = m.userName;
 
-    for(let m of members){
-
-        let div = document.createElement("div");
-        div.textContent = m.userName;
-
-        container.appendChild(div);
-    }
+    container.appendChild(div);
+  }
 }
-async function QuitGroup(){
+async function QuitGroup() {
+  await fetch("https://localhost:3000/group/leave", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      idGroup: groupId,
+    }),
+  });
 
-    await fetch("https://localhost:3000/group/leave", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            idGroup: groupId
-        })
-    });
-
-    window.location.href = "accueil.html";
+  window.location.href = "accueil.html";
 }
 function SendMessage() {
+  const input = document.getElementById("chatInput");
 
-    const input = document.getElementById("chatInput");
+  const message = input.value;
 
-    const message = input.value;
+  if (!message) return;
 
-    if (!message) return;
+  ws.send(JSON.stringify({
+    type: "chat:message",
+    groupId: groupId,
+    message: message,
+  }));
 
-    ws.send(JSON.stringify({
-        type: "chat:message",
-        groupId: groupId,
-        message: message
-    }));
-
-    input.value = "";
+  input.value = "";
 }
 async function LoadMessages() {
+  const response = await fetch(
+    `https://localhost:3000/messages/${groupId}`,
+    {
+      credentials: "include",
+    },
+  );
 
-    const response = await fetch(
-        `https://localhost:3000/messages/${groupId}`,
-        {
-            credentials: "include"
-        }
-    );
+  const messages = await response.json();
 
-    const messages = await response.json();
+  const chatBox = document.getElementById("chatMessages");
 
-    const chatBox = document.getElementById("chatMessages");
+  chatBox.innerHTML = "";
 
-    chatBox.innerHTML = "";
+  for (const msg of messages) {
+    const div = document.createElement("div");
 
-    for (const msg of messages) {
+    div.className = "chatMessage";
 
-        const div = document.createElement("div");
+    div.textContent = `${msg.userName} : ${msg.content}`;
 
-        div.className = "chatMessage";
+    chatBox.appendChild(div);
+  }
 
-        div.textContent =
-            `${msg.userName} : ${msg.content}`;
-
-        chatBox.appendChild(div);
-    }
-
-    chatBox.scrollTop = chatBox.scrollHeight;
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function start_pr() {
-   if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send("pr_button_click"); 
-      
-      console.log("Envoi de start_pr réussi, préparation de la redirection...");
-      
-      ws.onclose = null; 
-      
-      setTimeout(() => {
-         ws.close(); // Ferme proprement
-         location.replace(`https://localhost:8080/pr_settings.html`);
-      }, 200);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send("pr_button_click");
 
-   } else {
-      console.warn("Le WebSocket n'est pas connecté. Redirection directe.");
+    console.log("Envoi de start_pr réussi, préparation de la redirection...");
+
+    ws.onclose = null;
+
+    setTimeout(() => {
+      ws.close(); // Ferme proprement
       location.replace(`https://localhost:8080/pr_settings.html`);
-   }
+    }, 200);
+  } else {
+    console.warn("Le WebSocket n'est pas connecté. Redirection directe.");
+    location.replace(`https://localhost:8080/pr_settings.html`);
+  }
 }
 
 LoadMessages();
