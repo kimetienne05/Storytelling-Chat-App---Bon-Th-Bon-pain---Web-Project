@@ -1,190 +1,187 @@
-html, body{
-    height: 100%;
-    margin: 0;
+html, body {
+  height: 100%;
+  margin: 0;
 }
 
 /* TITRE */
 
-.title{
-    border-bottom: 2px solid black;
+.title {
+  border-bottom: 2px solid black;
 
-    height: 80px;
+  height: 80px;
 
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
-    position: relative;
+  position: relative;
 }
 
-.title button{
+.title button {
+  position: absolute;
 
-    position: absolute;
+  left: 20px;
 
-    left: 20px;
+  padding: 10px 15px;
 
-    padding: 10px 15px;
-
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* CONTENU PRINCIPAL */
 
-.main{
-    display: flex;
+.main {
+  display: flex;
 
-    height: calc(100vh - 80px);
+  height: calc(100vh - 80px);
 }
 
 /* COLONNE GAUCHE */
 
-.left{
-    width: 250px;
+.left {
+  width: 250px;
 
-    border-right: 2px solid black;
+  border-right: 2px solid black;
 
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 /* GESTION DES THÉS */
 
-.gestionThe{
-    height: 33.33%;
+.gestionThe {
+  height: 33.33%;
 
-    border-bottom: 2px solid black;
+  border-bottom: 2px solid black;
 
-    padding: 10px;
+  padding: 10px;
 
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 /* GESTION DU GROUPE */
 
-.groupe{
-    height: 66.66%;
+.groupe {
+  height: 66.66%;
 
-    padding: 10px;
+  padding: 10px;
 
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 /* CENTRE */
 
-.the{
-    flex: 1;
+.the {
+  flex: 1;
 
-    padding: 10px;
+  padding: 10px;
 
-    overflow-y: auto;
+  overflow-y: auto;
 }
 
 /* COLONNE DROITE */
 
-.right{
-    width: 250px;
+.right {
+  width: 250px;
 
-    border-left: 2px solid black;
+  border-left: 2px solid black;
 
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
-
 
 /* BOULANGERIE */
 
-.boulangerie{
-    height: 33.33%;
+.boulangerie {
+  height: 33.33%;
 
-    border-bottom: 2px solid black;
+  border-bottom: 2px solid black;
 
-    padding: 10px;
+  padding: 10px;
 
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 /* CHAT */
 .chat {
-    display: flex;
-    flex-direction: column;
-    height: 500px;
+  display: flex;
+  flex-direction: column;
+  height: 500px;
 }
 
 #chatMessages {
-    flex: 1;
-    overflow-y: auto;
-    border: 1px solid black;
-    padding: 10px;
-    background: white;
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid black;
+  padding: 10px;
+  background: white;
 }
 
 .chatInputBox {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 #chatInput {
-    flex: 1;
+  flex: 1;
 }
 #chatMessages {
-    flex: 1;
-    overflow-y: auto;
-    border: 1px solid black;
-    padding: 10px;
-    background: white;
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid black;
+  padding: 10px;
+  background: white;
 
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 #chatMessages {
-    flex: 1;
-    overflow-y: auto;
-    border: 1px solid black;
-    padding: 10px;
-    background: white;
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid black;
+  padding: 10px;
+  background: white;
 
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-#popup{
-    display: none;
+#popup {
+  display: none;
 
-    position: fixed;
+  position: fixed;
 
-    top: 0;
-    left: 0;
+  top: 0;
+  left: 0;
 
-    width: 100%;
-    height: 100%;
-    padding-bottom: 10px;
+  width: 100%;
+  height: 100%;
+  padding-bottom: 10px;
 
-    background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
-#popupouvert{
-    background-color: white;
+#popupouvert {
+  background-color: white;
 
-    width: 300px;
+  width: 300px;
 
-    padding: 20px;
+  padding: 20px;
 
-    margin: 200px auto;
+  margin: 200px auto;
 
-    text-align: center;
+  text-align: center;
 }
-#userList{
+#userList {
+  height: 150px;
 
-    height: 150px;
+  overflow-y: scroll;
 
-    overflow-y: scroll;
+  border: 1px solid gray;
 
-    border: 1px solid gray;
+  padding: 5px;
 
-    padding: 5px;
-
-    text-align: left;
+  text-align: left;
 }
