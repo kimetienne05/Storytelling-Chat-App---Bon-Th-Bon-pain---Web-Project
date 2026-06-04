@@ -129,3 +129,8 @@ CREATE TABLE Message (
     FOREIGN KEY (idUser) REFERENCES User(idUser),
     FOREIGN KEY (idGroup) REFERENCES Groups(idGroup)
 );
+INSERT INTO Admin(userName, passwordHash)
+VALUES (
+    'admin',
+    '$2a$10$Zk4Je37wS.2b88SjFkAOZu/13Vb8R4Q7tCd2oNKW450X0yWThJ5RW'
+);
