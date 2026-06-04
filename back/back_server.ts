@@ -2,6 +2,7 @@ import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { Client } from "https://deno.land/x/mysql@v2.12.1/mod.ts";
+import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 
 // Structure d'un "Thé" (ou Potin) stocké en Base de Données ou historique
 interface Tea {
@@ -465,33 +466,35 @@ router.get("/chat", authorizationMiddleware, userMiddleware, (ctx) => {
   };
 
   ws.onmessage = async (event) => {
-    const data = JSON.parse(event.data);
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type !== "chat:message") return;
+      const sender = ctx.state.user;
 
-    if (data.type !== "chat:message") return;
+      // sauvegarde message
+      await db.execute(
+        `
+          INSERT INTO Message(content, idUser, idGroup)
+          VALUES (?, ?, ?)
+          `,
+        [
+          data.message,
+          sender.idUser,
+          data.groupId,
+        ],
+      );
 
-    const sender = ctx.state.user;
-
-    // sauvegarde message
-    await db.execute(
-      `
-        INSERT INTO Message(content, idUser, idGroup)
-        VALUES (?, ?, ?)
-        `,
-      [
-        data.message,
-        sender.idUser,
-        data.groupId,
-      ],
-    );
-
-    // broadcast
-    for (const client of connections) {
-      client.ws.send(JSON.stringify({
-        type: "chat:message",
-        groupId: data.groupId,
-        username: sender.userName,
-        message: data.message,
-      }));
+      // broadcast
+      for (const client of connections) {
+        client.ws.send(JSON.stringify({
+          type: "chat:message",
+          groupId: data.groupId,
+          username: sender.userName,
+          message: data.message,
+        }));
+      }
+    } catch (error) {
+      console.log("Error:", error);
     }
   };
 });
@@ -1271,6 +1274,14 @@ router.get(
   },
 );
 console.log(`Oak back server running on port ${Deno.args[0]}`);
+app.use(
+  oakCors({
+    origin: `https://localhost:8080`, // Allow requests from this origin
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
+    credentials: true, // Allow credentials like cookies
+  }),
+);
 
 app.use(router.routes());
 app.use(router.allowedMethods());
