@@ -1,7 +1,7 @@
 const ws = new WebSocket(`wss://localhost:3000/pr`);
 
 let nb_round = 0;
-let prep_time_limit = 0;
+// let _prep_time_limit = 0;
 let round_time_limit = 0;
 let round_actuel = 1;
 let jeSuisAdminPartie = false;
@@ -113,7 +113,7 @@ function gererAffichageBoutonsAdmin() {
   }
 }
 
-async function ready() {
+function _ready() {
   const round = document.getElementById("current_round");
   if (round) round.innerText = round_actuel;
   if (jeSuisAdminPartie) {
@@ -152,7 +152,7 @@ function switch_screen(next_screen) {
   }
 }
 
-function loop(last_screen, results) {
+function _loop(last_screen, results) {
   console.log("Round actuel :", round_actuel);
   console.log("Total des rounds prévus (nb_round) :", nb_round);
 
@@ -186,15 +186,16 @@ function loop(last_screen, results) {
 // - doit permettre d'ajouter n'importe quel potin de la base de donnée
 // - (facultatif): quand on parle d'une personne en particulier sans la nommée correctement : on n'ajoute le qualificatif dans la base
 // et on indique que bidule c'est en fait baptiste
-function add_potin() {
+function _add_potin() {
   // recupérationdes variables
-  let title = document.getElementById("potin_titre").value;
-  let story = document.getElementById("potin_contenue").value;
+  const title = document.getElementById("potin_titre").value;
+  const story = document.getElementById("potin_contenue").value;
   let dateEvenement = document.getElementById("potin_date_evenement").value;
   const verite = document.querySelector('input[name="verite"]:checked');
 
   if (!title.trim() || !story.trim()) {
     alert("Le titre et le contenu sont obligatoires !");
+    let;
     return; // on stoppe tout
   }
   if (dateEvenement === "") {
@@ -205,7 +206,7 @@ function add_potin() {
     return;
   }
 
-  let vrai = verite.value === "vrai";
+  const vrai = verite.value === "vrai";
 
   fetch("https://localhost:3000/pr", {
     method: "POST",
@@ -270,7 +271,7 @@ async function add_old_tea(tab) {
   }
 }
 
-function definitive_add() {
+function _definitive_add() {
   ws.send("partie fini on ajoute");
 }
 
@@ -294,7 +295,7 @@ function buildJoueursBoutons(joueurs) {
   });
 }
 
-function setVerite(val) {
+function _setVerite(val) {
   selected_verite = val;
   document.getElementById("btn_vrai").classList.toggle(
     "selected",
@@ -312,7 +313,7 @@ function updateConfirmerBtn() {
   if (btn) btn.disabled = selected_auteur === null || selected_verite === null;
 }
 
-function confirmerReponse() {
+function _confirmerReponse() {
   ws.send(JSON.stringify({
     action: "submit_answer",
     auteur: selected_auteur,

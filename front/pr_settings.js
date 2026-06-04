@@ -1,6 +1,6 @@
 const ws_chat = new WebSocket(`wss://localhost:3000/start_pr`);
 
-function go_to_game() {
+function _go_to_game() {
   const sendJoin = () => {
     if (ws_chat.readyState === WebSocket.OPEN) {
       ws_chat.send("join_allowed");
@@ -23,11 +23,11 @@ function go_to_game() {
   }
 }
 
-function settings_done(e) {
+function _settings_done(e) {
   e.preventDefault();
-  let nb_potin = document.getElementById("nb_potin").value;
-  let prep_time_game = document.getElementById("prep_time").value;
-  let round_time = document.getElementById("round_time").value;
+  const nb_potin = document.getElementById("nb_potin").value;
+  const prep_time_game = document.getElementById("prep_time").value;
+  const round_time = document.getElementById("round_time").value;
 
   fetch("https://localhost:3000/settings", {
     method: "POST",
