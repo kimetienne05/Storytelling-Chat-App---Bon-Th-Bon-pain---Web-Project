@@ -1,146 +1,314 @@
-# Bonthebonpain
+# BonTheBonPain - Installation et démarrage
 
-## Getting started
+## Prérequis
 
-To make it easy for you to get started with GitLab, here's a list of recommended
-next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it
-easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file)
-      or
-      [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file)
-      files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository)
-      or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.polytech.umontpellier.fr/emie.andreo/bonthebonpain.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.polytech.umontpellier.fr/emie.andreo/bonthebonpain/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+* Git
+* Docker Desktop ou Docker Engine + Docker Compose
+* OpenSSL
 
 ---
 
-# Editing this README
+## 1. Cloner le projet
 
-When you're ready to make this README your own, just edit this file and use the
-handy template below (or feel free to structure it however you want - this is
-just a starting point!). Thanks to
-[makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+git clone <url-du-projet>
+cd bonthebonpain
+```
 
-## Suggestions for a good README
+---
 
-Every project is different, so consider which of these sections apply to yours.
-The sections used in the template are suggestions for most open source projects.
-Also keep in mind that while a README can be too long and detailed, too long is
-better than too short. If you think your README is too long, consider utilizing
-another form of documentation rather than cutting out information.
+## 2. Configuration du Frontend
 
-## Name
+Se placer dans le dossier du front :
 
-Choose a self-explaining name for your project.
+```bash
+cd front
+```
 
-## Description
+Créer le fichier `.env` :
 
-Let people know what your project can do specifically. Provide context and add a
-link to any reference visitors might be unfamiliar with. A list of Features or a
-Background subsection can also be added here. If there are alternatives to your
-project, this is a good place to list differentiating factors.
+```bash
+touch .env
+```
 
-## Badges
+Remplir le fichier `.env` en vous basant sur le fichier `envExemple`.
 
-On some READMEs, you may see small images that convey metadata, such as whether
-or not all the tests are passing for the project. You can use Shields to add
-some to your README. Many services also have instructions for adding a badge.
+Générer les certificats SSL :
 
-## Visuals
+```bash
+openssl req -x509 -newkey rsa:4096 \
+  -keyout key.pem \
+  -out cert.pem \
+  -days 365 \
+  -nodes \
+  -subj "/CN=localhost"
+```
 
-Depending on what you are making, it can be a good idea to include screenshots
-or even a video (you'll frequently see GIFs rather than actual videos). Tools
-like ttygif can help, but check out Asciinema for a more sophisticated method.
+Revenir à la racine du projet :
 
-## Installation
+```bash
+cd ..
+```
 
-Within a particular ecosystem, there may be a common way of installing things,
-such as using Yarn, NuGet, or Homebrew. However, consider the possibility that
-whoever is reading your README is a novice and would like more guidance. Listing
-specific steps helps remove ambiguity and gets people to using your project as
-quickly as possible. If it only runs in a specific context like a particular
-programming language version or operating system or has dependencies that have
-to be installed manually, also add a Requirements subsection.
+---
 
-## Usage
+## 3. Configuration du Backend
 
-Use examples liberally, and show the expected output if you can. It's helpful to
-have inline the smallest example of usage that you can demonstrate, while
-providing links to more sophisticated examples if they are too long to
-reasonably include in the README.
+Se placer dans le dossier du back :
 
-## Support
+```bash
+cd back
+```
 
-Tell people where they can go to for help. It can be any combination of an issue
-tracker, a chat room, an email address, etc.
+Générer les certificats SSL :
 
-## Roadmap
+```bash
+openssl req -x509 -newkey rsa:4096 \
+  -keyout key.pem \
+  -out cert.pem \
+  -days 365 \
+  -nodes \
+  -subj "/CN=localhost"
+```
 
-If you have ideas for releases in the future, it is a good idea to list them in
-the README.
+Revenir à la racine du projet :
 
-## Contributing
+```bash
+cd ..
+```
 
-State if you are open to contributions and what your requirements are for
-accepting them.
+---
 
-For people who want to make changes to your project, it's helpful to have some
-documentation on how to get started. Perhaps there is a script that they should
-run or some environment variables that they need to set. Make these steps
-explicit. These instructions could also be useful to your future self.
+## 4. Démarrage des conteneurs
 
-You can also document commands to lint the code or run tests. These steps help
-to ensure high code quality and reduce the likelihood that the changes
-inadvertently break something. Having instructions for running tests is
-especially helpful if it requires external setup, such as starting a Selenium
-server for testing in a browser.
+Démarrer Docker Desktop (ou vérifier que Docker Engine est lancé).
 
-## Authors and acknowledgment
+Construire et démarrer les conteneurs :
 
-Show your appreciation to those who have contributed to the project.
+```bash
+docker compose down
+docker compose up -d --build
+```
 
-## License
+---
 
-For open source projects, say how it is licensed.
+## 5. Initialisation de la base de données
 
-## Project status
+Accéder au conteneur MariaDB :
 
-If you have run out of energy or time for your project, put a note at the top of
-the README saying that development has slowed down or stopped completely.
-Someone may choose to fork your project or volunteer to step in as a maintainer
-or owner, allowing your project to keep going. You can also make an explicit
-request for maintainers.
+```bash
+docker exec -it dbBtbp sh
+```
+
+Se connecter à MariaDB :
+
+```bash
+mariadb -u root -p
+```
+
+Entrer le mot de passe défini dans le fichier `.env`.
+
+Sélectionner la base :
+
+```sql
+USE btbp;
+```
+
+---
+
+## 6. Création du schéma de base de données
+
+Exécuter les requêtes SQL suivantes :
+
+```sql
+CREATE TABLE Admin (
+    idAdmin INT PRIMARY KEY AUTO_INCREMENT,
+    userName VARCHAR(30) NOT NULL,
+    passwordHash VARCHAR(1024) NOT NULL,
+    refreshToken VARCHAR(1024),
+    accessToken VARCHAR(1024)
+);
+
+CREATE TABLE User (
+    idUser INT PRIMARY KEY AUTO_INCREMENT,
+    userName VARCHAR(30) NOT NULL,
+    passwordHash VARCHAR(255) NOT NULL,
+    refreshToken VARCHAR(1024),
+    accessToken VARCHAR(1024)
+);
+
+ALTER TABLE User
+ADD UNIQUE (userName);
+
+CREATE TABLE Groups (
+    idGroup INT PRIMARY KEY AUTO_INCREMENT,
+    groupName VARCHAR(30) NOT NULL,
+    groupOwner INT,
+    FOREIGN KEY (groupOwner) REFERENCES User(idUser)
+);
+
+CREATE TABLE Baguette (
+    idBaguette INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(30) NOT NULL
+);
+
+CREATE TABLE TeaType (
+    idTeaType INT PRIMARY KEY,
+    name VARCHAR(30) NOT NULL
+);
+
+INSERT INTO TeaType (idTeaType, name) VALUES
+(0, 'Souvenir'),
+(1, 'Love'),
+(2, 'Ennemies'),
+(3, 'Random'),
+(4, 'Tragédie'),
+(5, 'Amies');
+
+CREATE TABLE TeaStatus (
+    idTeaStatus INT PRIMARY KEY,
+    name VARCHAR(30) NOT NULL
+);
+
+INSERT INTO TeaStatus (idTeaStatus, name) VALUES
+(0, 'Rumeur'),
+(1, 'Love'),
+(2, 'Théorie'),
+(3, 'Confirmé');
+
+CREATE TABLE Tea (
+    idTea INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(30) NOT NULL,
+    creator INT NOT NULL,
+    fromGroup INT,
+    textContent TEXT,
+    type INT NOT NULL,
+    postDate DATE,
+    eventDate DATE,
+    anonymous BOOLEAN,
+    status INT NOT NULL,
+    FOREIGN KEY (creator) REFERENCES User(idUser),
+    FOREIGN KEY (fromGroup) REFERENCES Groups(idGroup),
+    FOREIGN KEY (type) REFERENCES TeaType(idTeaType),
+    FOREIGN KEY (status) REFERENCES TeaStatus(idTeaStatus)
+);
+
+CREATE TABLE UserGroup (
+    idUser INT NOT NULL,
+    idGroup INT NOT NULL,
+    status VARCHAR(20) DEFAULT 'waiting',
+    PRIMARY KEY (idUser, idGroup),
+    FOREIGN KEY (idUser) REFERENCES User(idUser),
+    FOREIGN KEY (idGroup) REFERENCES Groups(idGroup)
+);
+
+CREATE TABLE BagGroup (
+    idBaguette INT NOT NULL,
+    idGroup INT NOT NULL,
+    PRIMARY KEY (idBaguette, idGroup),
+    FOREIGN KEY (idBaguette) REFERENCES Baguette(idBaguette),
+    FOREIGN KEY (idGroup) REFERENCES Groups(idGroup)
+);
+
+CREATE TABLE BagTea (
+    idBaguette INT NOT NULL,
+    idTea INT NOT NULL,
+    PRIMARY KEY (idBaguette, idTea),
+    FOREIGN KEY (idBaguette) REFERENCES Baguette(idBaguette),
+    FOREIGN KEY (idTea) REFERENCES Tea(idTea)
+);
+
+CREATE TABLE PotinsPartie (
+    idPotin INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(50) NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    truthValue BOOLEAN NOT NULL,
+    isNew BOOLEAN NOT NULL,
+    postDate DATE,
+    eventDate DATE,
+    UserName VARCHAR(30) NOT NULL,
+    idUser INT NOT NULL,
+    idGroup INT NOT NULL,
+
+    CONSTRAINT fk_potin_username
+        FOREIGN KEY (UserName)
+        REFERENCES User(userName)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_potin_userid
+        FOREIGN KEY (idUser)
+        REFERENCES User(idUser)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_potin_group
+        FOREIGN KEY (idGroup)
+        REFERENCES Groups(idGroup)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE Message (
+    idMessage INT AUTO_INCREMENT PRIMARY KEY,
+    content TEXT NOT NULL,
+    sendDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    idUser INT NOT NULL,
+    idGroup INT NOT NULL,
+    FOREIGN KEY (idUser) REFERENCES User(idUser),
+    FOREIGN KEY (idGroup) REFERENCES Groups(idGroup)
+);
+```
+
+---
+
+## 7. Création du compte administrateur
+
+Exécuter la requête suivante :
+
+```sql
+INSERT INTO Admin(userName, passwordHash)
+VALUES (
+    'admin',
+    '$2a$10$Zk4Je37wS.2b88SjFkAOZu/13Vb8R4Q7tCd2oNKW450X0yWThJ5RW'
+);
+```
+
+### Identifiants administrateur
+
+* Nom d'utilisateur : `admin`
+* Mot de passe : `admin`
+
+---
+
+## 8. Quitter MariaDB et le conteneur
+
+Quitter MariaDB :
+
+```bash
+exit
+```
+
+Quitter le conteneur :
+
+```bash
+exit
+```
+
+---
+
+## 9. Redémarrer l'application
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+---
+
+## 10. Accéder à l'application
+
+Ouvrir un navigateur et accéder à :
+
+```text
+https://localhost:8080
+```
+
+> Le navigateur affichera probablement un avertissement de sécurité lié au certificat SSL auto-signé. Il est normal de l'accepter pour un environnement de développement.
