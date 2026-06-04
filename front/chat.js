@@ -44,9 +44,33 @@ async function connectWebSocket() {
 
   ws.onmessage = function (event) {
     console.log(`WebSocket received message: ${event.data}.`);
-    const message = document.createElement("div");
-    message.textContent = event.data;
-    document.getElementById("chatbox").appendChild(message);
+
+    if (event.data === "block_temp_for_all") {
+      const start_button = document.getElementById("button_start");
+      if (start_button) {
+        // start_button.disabled = true;
+        // start_button.innerText = "une partie est en préparation"
+        start_button.style.pointerEvents = "none"; // désactive le clic
+        start_button.style.opacity = "0.4"; // feedback visuel
+        start_button.title = "Une partie est en préparation"; // tooltip
+      }
+    }
+    if (event.data === "all_join_pr") {
+      const join_button = document.createElement("button");
+      join_button.innerText = "Rejoindre la partie";
+      join_button.onclick = function () {
+        location.replace("https://localhost:8080/pr.html");
+      };
+      const chatbox = document.getElementById("chatbox");
+      if (chatbox) {
+        chatbox.appendChild(join_button);
+        console.log("bouton de join créer");
+      }
+    } else {
+      const message = document.createElement("div");
+      message.textContent = event.data;
+      document.getElementById("chatbox").appendChild(message);
+    }
   };
 
   ws.onerror = function (error) {
@@ -87,5 +111,23 @@ async function attemptRefreshToken() {
   } catch (error) {
     console.error("Erreur réseau:", error);
     return false;
+  }
+}
+
+function _start_pr() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send("pr_button_click");
+
+    console.log("Envoi de start_pr réussi, préparation de la redirection...");
+
+    ws.onclose = null;
+
+    setTimeout(() => {
+      ws.close(); // Ferme proprement
+      location.replace(`https://localhost:8080/pr_settings.html`);
+    }, 200);
+  } else {
+    console.warn("Le WebSocket n'est pas connecté. Redirection directe.");
+    location.replace(`https://localhost:8080/pr_settings.html`);
   }
 }

@@ -1,11 +1,39 @@
 import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts";
-import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { Client } from "https://deno.land/x/mysql@v2.12.1/mod.ts";
+import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
+
+// Structure d'un "Thé" (ou Potin) stocké en Base de Données ou historique
+interface Tea {
+  idTea?: number; // Optionnel si non encore inséré (auto-increment)
+  content: string;
+  isTrue: boolean; // ou number selon comment vous stockez le booléen en SQL (0 ou 1)
+  idUser: number;
+  userName?: string; // Si vous faites une jointure pour récupérer le nom
+  idGroup: number;
+  creationDate?: string | Date;
+}
+
+// Structure d'un potin en cours de traitement dans le jeu (potin_pool)
+interface GamePotin {
+  id: string | number; // Identifiant unique dans la partie
+  content: string;
+  isTrue: boolean;
+  idUser: number; // L'auteur du potin
+  userName: string; // Le nom de l'auteur (essentiel pour le "guess")
+}
+
 const router = new Router();
 const app = new Application();
-
+const _clients = new Set();
+let current_pr_settings = { nbp: 3, prtime: 60, rtime: 30 };
+const old_tea: Tea[] = [];
+let potin_pool: GamePotin[] = [];
+const game_players: Map<string, { ws: WebSocket; score: number }> = new Map();
+let round_answers: Map<string, { auteur: string; verite: boolean }> = new Map();
+let current_potin: GamePotin | null = null;
+let round_timer: number | null = null;
 //pepper:
 const PEPPER = Deno.env.get("PASSWORD_PEPPER");
 if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
@@ -318,7 +346,6 @@ router.post("/inscription", async (ctx) => {
 
   removeTokenByUser(name);
   tokens[token] = name;
-
   ctx.response.status = 200;
   ctx.response.headers.set(
     "Set-Cookie",
@@ -402,6 +429,15 @@ if (Deno.args.length < 1) {
   Deno.exit();
 }
 
+const options = { port: Deno.args[0] };
+
+if (Deno.args.length >= 3) {
+  options.secure = true;
+  options.cert = await Deno.readTextFile(Deno.args[1]);
+  options.key = await Deno.readTextFile(Deno.args[2]);
+  console.log(`SSL conf ready (use https)`);
+}
+
 router.get("/chat", authorizationMiddleware, userMiddleware, (ctx) => {
   if (!ctx.isUpgradable) {
     ctx.throw(501);
@@ -430,33 +466,75 @@ router.get("/chat", authorizationMiddleware, userMiddleware, (ctx) => {
   };
 
   ws.onmessage = async (event) => {
-    const data = JSON.parse(event.data);
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type !== "chat:message") return;
+      const sender = ctx.state.user;
 
-    if (data.type !== "chat:message") return;
+      // sauvegarde message
+      await db.execute(
+        `
+          INSERT INTO Message(content, idUser, idGroup)
+          VALUES (?, ?, ?)
+          `,
+        [
+          data.message,
+          sender.idUser,
+          data.groupId,
+        ],
+      );
 
-    const sender = ctx.state.user;
+      // broadcast
+      for (const client of connections) {
+        client.ws.send(JSON.stringify({
+          type: "chat:message",
+          groupId: data.groupId,
+          username: sender.userName,
+          message: data.message,
+        }));
+      }
+    } catch (error) {
+      console.log("Error:", error);
+    }
+  };
+});
 
-    // sauvegarde message
-    await db.execute(
-      `
-        INSERT INTO Message(content, idUser, idGroup)
-        VALUES (?, ?, ?)
-        `,
-      [
-        data.message,
-        sender.idUser,
-        data.groupId,
-      ],
-    );
+router.get("/start_pr", authorizationMiddleware, (ctx) => {
+  if (!ctx.isUpgradable) {
+    ctx.throw(501);
+  }
 
-    // broadcast
-    for (const client of connections) {
-      client.ws.send(JSON.stringify({
-        type: "chat:message",
-        groupId: data.groupId,
-        username: sender.userName,
-        message: data.message,
-      }));
+  const ws = ctx.upgrade();
+
+  const _user = ctx.state.user;
+
+  ws.onopen = () => {
+    console.log("WebSocket connection established.");
+    connections.push(ws);
+  };
+
+  ws.onerror = (error) => {
+    console.log("Error:", error);
+  };
+
+  ws.onmessage = (event) => {
+    if (event.data === "pr_button_click") {
+      for (let i = 0; i < connections.length; i++) {
+        if (connections[i].readyState === WebSocket.OPEN) {
+          connections[i].send("block_temp_for_all");
+        }
+      }
+    }
+    if (event.data === "join_allowed") {
+      for (let i = 0; i < connections.length; i++) {
+        if (connections[i].readyState === WebSocket.OPEN) {
+          connections[i].send("all_join_pr");
+        }
+      }
+    } else {
+      for (let i = 0; i < connections.length; i++) {
+        connections[i].send(`${ctx.state.tokenData.userName} : ${event.data}`);
+      }
     }
   };
 });
@@ -662,14 +740,365 @@ router.get("/group/members/:id", authorizationMiddleware, async (ctx) => {
   ctx.response.body = res.rows;
 });
 
-app.use(
-  oakCors({
-    origin: `https://localhost:8080`, // Allow requests from this origin
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
-    credentials: true, // Allow credentials like cookies
-  }),
-);
+router.post("/settings", async (ctx) => {
+  const body = await ctx.request.body.json();
+  const { nbp, prtime, rtime } = body;
+  current_pr_settings = { nbp, prtime, rtime };
+  console.log(current_pr_settings);
+  ctx.response.status = 200;
+  const res = await db.execute("SELECT * FROM PotinsPartie");
+  potin_pool = Array.isArray(res.rows)
+    ? [...res.rows]
+    : Object.values(res.rows || {});
+  for (const [username, player] of game_players) {
+    game_players.set(username, { ws: player.ws, score: 0 });
+  }
+  round_answers = new Map();
+});
+
+let adminPartieUser: string | null = null;
+
+router.get("/pr", authorizationMiddleware, (ctx) => {
+  if (!ctx.isUpgradable) {
+    ctx.throw(501);
+  }
+  const current_username = ctx.state.tokenData.userName;
+  const ws = ctx.upgrade();
+  ws.onopen = function () {
+    console.log("WebSocket connection established.");
+    connections.push(ws);
+  };
+
+  ws.onerror = (error) => {
+    console.log(`Error: ${error}`);
+  };
+
+  ws.onclose = () => {
+    console.log(`[WS Game] ${current_username} déconnecté.`);
+    // Si l'admin quitte, on remet à null pour que le prochain devienne admin
+    if (adminPartieUser === current_username) {
+      adminPartieUser = null;
+    }
+    const index = connections.indexOf(ws);
+    if (index !== -1) connections.splice(index, 1);
+
+    game_players.delete(current_username); //on degage le joueur de la game
+  };
+
+  ws.onmessage = async (event) => {
+    console.log(`Received from ${current_username}: ${event.data}`);
+
+    if (event.data === "add_new_player") {
+      // Si personne n'est encore AdminPartie, le premier joueur qui rejoint le devient
+      if (!adminPartieUser) {
+        adminPartieUser = current_username;
+        console.log(`[GAME] ${adminPartieUser} est désigné AdminPartie `);
+      }
+
+      game_players.set(current_username, { ws, score: 0 });
+      const playerList = Array.from(game_players.entries()).map((
+        [name, p],
+      ) => ({ name, score: p.score }));
+      for (const [, player] of game_players) {
+        if (player.ws.readyState === WebSocket.OPEN) {
+          player.ws.send(
+            JSON.stringify({ action: "player_list", players: playerList }),
+          );
+        }
+      }
+      // Envoyer une mise à jour à tout le monde pour le compteur
+      // for (let i = 0; i < connections.length; i++) {
+      //    if (connections[i].readyState === WebSocket.OPEN) {
+      //       connections[i].send("plus one");
+      //    }
+      // }
+      // Renvoyer les configurations et le statut d'admin spécifique à ce joueur
+      ws.send(JSON.stringify({
+        action: "current pr settings",
+        donnees: current_pr_settings,
+        isAdminPartie: adminPartieUser === current_username, // true ou false
+      }));
+    }
+
+    // 2. Synchroniser le changement d'écran pour TOUT LE MONDE
+    if (event.data === "trigger_next_round_screen") {
+      // Seul l'admin de partie a le droit de pousser ce signal
+      if (current_username !== adminPartieUser) return;
+
+      const msg = JSON.stringify({ action: "change_screen", screen: "guess" });
+      for (const c of connections) {
+        if (c.readyState === WebSocket.OPEN) c.send(msg);
+      }
+    }
+
+    // 3. Pioche centralisée : Un seul potin est tiré du pool et envoyé à TOUS les joueurs d'un coup !
+    if (event.data === "next_potin") {
+      // Sécurité : Seul l'admin de partie peut déclencher la pioche collective
+      if (current_username !== adminPartieUser) return;
+
+      if (potin_pool.length === 0) {
+        const res = await db.execute("SELECT * FROM PotinsPartie");
+        potin_pool = Array.isArray(res.rows)
+          ? [...res.rows]
+          : Object.values(res.rows || {});
+      }
+      if (potin_pool.length === 0) {
+        const endMsg = JSON.stringify({
+          action: "change_screen",
+          screen: "results",
+        });
+        for (const c of connections) {
+          if (c.readyState === WebSocket.OPEN) c.send(endMsg);
+        }
+        return;
+      }
+      const i = Math.floor(Math.random() * potin_pool.length);
+      const potin = potin_pool.splice(i, 1)[0];
+
+      // On distribue le MEME potin à TOUT LE MONDE
+      const msg = JSON.stringify({ action: "show_potin", potin });
+      for (const [, p] of game_players) {
+        if (p.ws.readyState === WebSocket.OPEN) p.ws.send(msg);
+      }
+      current_potin = potin;
+      round_answers = new Map(); // reset les réponses du round
+
+      // Timer serveur : au bout de rtime secondes, on passe au reveal
+      if (round_timer) clearTimeout(round_timer);
+      round_timer = setTimeout(() => {
+        const revealMsg = JSON.stringify({
+          action: "change_screen",
+          screen: "reveal",
+        });
+        for (const [, p] of game_players) {
+          if (p.ws.readyState === WebSocket.OPEN) p.ws.send(revealMsg);
+        }
+      }, Number(current_pr_settings.rtime) * 1000);
+    }
+    if (event.data === "send_me_old_tea") {
+      const posted = await db.execute(
+        "SELECT t.title, u.UserName, t.textContent FROM Tea t JOIN User u ON t.creator = u.idUser",
+      );
+
+      const teas = Array.isArray(posted.rows)
+        ? posted.rows
+        : Object.values(posted.rows || {});
+      ws.send(JSON.stringify({
+        action: "get_old_tea",
+        donnees: teas.filter((tea) => tea.UserName === current_username),
+      }));
+
+      console.log("les anciens potins", old_tea);
+    }
+    if (event.data === "partie fini on ajoute") {
+      try {
+        const recup = await db.execute(
+          "SELECT title, content, postDate, eventDate, UserName, idUser FROM PotinsPartie WHERE (isNew = ? AND truthValue = ?) ",
+          [1, 1],
+        );
+        // const recup_tab = recup.rows?.[0];
+        const recup_tab = Array.isArray(recup.rows)
+          ? recup.rows
+          : Object.values(recup.rows || {});
+
+        for (let i = 0; i < recup_tab.length; i++) {
+          await db.execute(
+            "INSERT INTO Tea (title, creator, fromGroup, textContent, type, postDate,eventDate,anonymous,status) VALUES(?,?,?,?,?,?,?,?,?)",
+            [
+              recup_tab[i].title,
+              recup_tab[i].idUser,
+              null,
+              recup_tab[i].content,
+              0,
+              recup_tab[i].postDate,
+              recup_tab[i].eventDate,
+              false,
+              0,
+            ],
+          );
+          console.log("potin ajouté :", recup_tab[i].title);
+        }
+        await db.execute("drop table PotinsPartie;");
+
+        await db.execute(
+          "CREATE TABLE PotinsPartie (idPotin INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(50) NOT NULL, content VARCHAR(500) NOT NULL, truthValue BOOLEAN NOT NULL, isNew BOOLEAN NOT NULL, postDate DATE, eventDate DATE, UserName VARCHAR(30) NOT NULL, idUser INT NOT NULL, CONSTRAINT fk_potin_username FOREIGN KEY (UserName) REFERENCES `User`(userName) ON DELETE CASCADE, CONSTRAINT fk_potin_userid FOREIGN KEY (idUser) REFERENCES `User`(idUser) ON DELETE CASCADE);",
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    if (event.data.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(event.data);
+        if (parsed.action === "submit_answer") {
+          // Enregistrer la réponse du joueur
+          round_answers.set(current_username, {
+            auteur: parsed.auteur,
+            verite: parsed.verite,
+          });
+
+          // Calculer le point : bonne réponse = bon auteur ET bonne véracité
+          const bonAuteur = parsed.auteur === current_potin?.UserName;
+          const bonneVerite =
+            parsed.verite === Boolean(current_potin?.truthValue);
+          if (bonAuteur && bonneVerite) {
+            const p = game_players.get(current_username);
+            if (p) {
+              game_players.set(current_username, {
+                ws: p.ws,
+                score: p.score + 1,
+              });
+            }
+          }
+
+          // Broadcaster les scores mis à jour
+          const playerList = Array.from(game_players.entries()).map((
+            [name, p],
+          ) => ({ name, score: p.score }));
+          for (const [, p] of game_players) {
+            if (p.ws.readyState === WebSocket.OPEN) {
+              p.ws.send(
+                JSON.stringify({ action: "player_list", players: playerList }),
+              );
+            }
+          }
+
+          // Si tout le monde a répondu → reveal immédiat
+          if (round_answers.size >= game_players.size) {
+            if (round_timer) {
+              clearTimeout(round_timer);
+              round_timer = null;
+            }
+            const revealMsg = JSON.stringify({
+              action: "change_screen",
+              screen: "reveal",
+            });
+            for (const [, p] of game_players) {
+              if (p.ws.readyState === WebSocket.OPEN) p.ws.send(revealMsg);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  };
+});
+
+router.post("/pr", authorizationMiddleware, async (ctx) => {
+  try {
+    const body = await ctx.request.body.json();
+    const title = body.title;
+    const content = body.content;
+    const truthValue = body.truthValue === true ? 1 : 0;
+    const isNew = 1;
+    const today = new Date().toISOString().slice(0, 10);
+    const _eventDate = body._eventDate || null;
+
+    const current_username = ctx.state.tokenData.userName;
+    const userResult = await db.execute(
+      "SELECT idUser FROM User WHERE userName = ?",
+      [current_username],
+    );
+    const userRows = Array.isArray(userResult.rows)
+      ? userResult.rows
+      : Object.values(userResult.rows || {});
+
+    if (userRows.length === 0) {
+      ctx.response.status = 404;
+      ctx.response.body = { error: "Utilisateur non trouvé" };
+      return;
+    }
+
+    const idUser = userRows[0].idUser;
+
+    const _userRes = await db.execute(
+      "SELECT idUser FROM User WHERE userName = ?",
+      [current_username],
+    );
+
+    await db.execute(
+      "INSERT INTO PotinsPartie(title, content, truthValue, isNew, postDate, UserName, idUser) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [title, content, truthValue, isNew, today, current_username, idUser],
+    );
+    console.log(`Nouveau potin ajouté par ${current_username}`);
+
+    ctx.response.status = 201;
+    ctx.response.body = { message: "Potin enregistré avec succès !" };
+    // on récupère la liste de tout les potins de la partie
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du potin :", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: "Erreur interne du serveur" };
+  }
+});
+
+router.post("/pr_bis", authorizationMiddleware, async (ctx) => {
+  console.log(
+    "ContentType détecté par le serveur :",
+    ctx.request.headers.get("content-type"),
+  );
+  try {
+    const body = await ctx.request.body.json();
+    const title = body.title || "Potin Importé";
+    const content = body.content || "Pas de contenu";
+    const truthValue = body.truthValue === true ? 1 : 0;
+
+    const isNew = 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const _eventDate = body._eventDate || null;
+    const current_username = ctx.state.tokenData.userName;
+
+    const userResult = await db.execute(
+      "SELECT idUser FROM User WHERE userName = ?",
+      [current_username],
+    );
+    const userRows = Array.isArray(userResult.rows)
+      ? userResult.rows
+      : Object.values(userResult.rows || {});
+
+    if (userRows.length === 0) {
+      ctx.response.status = 404;
+      ctx.response.body = { error: "Utilisateur non trouvé" };
+      return;
+    }
+    const idUser = userRows[0].idUser;
+
+    await db.execute(
+      "INSERT INTO PotinsPartie(title, content, truthValue, isNew, postDate, UserName, idUser) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [title, content, truthValue, isNew, today, current_username, idUser],
+    );
+    console.log(`Nouveau potin ajouté par ${current_username}`);
+
+    ctx.response.status = 201;
+    ctx.response.body = { message: "Potin enregistré avec succès !" };
+    // on récupère la liste de tout les potins de la partie
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du potin :", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: "Erreur interne du serveur potin 2" };
+  }
+});
+
+router.get("/gestion_potin", authorizationMiddleware, async (ctx) => {
+  try {
+    const all_potin = await db.execute(
+      "SELECT p.*, u.UserName FROM PotinsPartie p JOIN User u ON p.UserName = u.userName",
+    );
+    const rowsArray = Array.isArray(all_potin.rows)
+      ? all_potin.rows
+      : Object.values(all_potin.rows || {});
+    ctx.response.status = 200;
+    ctx.response.body = rowsArray;
+
+    console.log("table des potins envoyée (${rowsArray.length} lignes).");
+  } catch (error) {
+    console.error("Erreur lors de l'envoie du potin :", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: "Erreur interne du serveur" };
+  }
+});
+
 router.post("/logout", (ctx) => {
   ctx.response.headers.set(
     "Set-Cookie",
@@ -845,9 +1274,20 @@ router.get(
   },
 );
 console.log(`Oak back server running on port ${Deno.args[0]}`);
+app.use(
+  oakCors({
+    origin: `https://localhost:8080`, // Allow requests from this origin
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
+    credentials: true, // Allow credentials like cookies
+  }),
+);
 
 app.use(router.routes());
 app.use(router.allowedMethods());
+
+console.log(`Oak back server running on port ${Deno.args[0]}`);
+
 await app.listen({
   port: Number(Deno.args[0]),
   secure: true,

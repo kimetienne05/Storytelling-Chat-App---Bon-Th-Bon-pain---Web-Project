@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>pr_settings</title>
+    <style>
+      .pr {
+        /* permet de ne pas afficher toute les morceaux du jeu d'un coup */
+        display: none;
+      }
+      /* on affiche au début que les settings */
+      #game_settings {
+        display: block;
+      }
+    </style>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body class="pr-settings-body">
+    <!-- Menu settings -->
+    <div class="field">
+      <div id="game_settings">
+        <form onsubmit="settings_done(event)">
+          <p>nombre de potins par personne dans cette game</p>
+          <label><input type="number" id="nb_potin" required min="1"> </label>
+          <p>temps accordé pour preparer le thé</p>
+          <label><input type="number" id="prep_time"></label>
+          <p>
+            temps d'un tour de guess (si tout le monde a guess direct to
+            resultat)
+          </p>
+          <label><input type="number" id="round_time" required min="1"> </label>
+          <!-- quand la partie est publié, le bouton dans le chat doit de nouveua être accessible -->
+          <button onclick="go_to_game();
+settings_done(event)">
+            publier la partie
+          </button>
+        </form>
+      </div>
+    </div>
+    <script src="pr_settings.js" defer></script>
+  </body>
+</html>

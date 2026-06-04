@@ -2,6 +2,8 @@ const params = new URLSearchParams(globalThis.location.search);
 const groupId = params.get("id");
 let allUsers = [];
 const ws = new WebSocket("wss://localhost:3000/chat");
+const gws = new WebSocket("wss://localhost:3000/start_pr");
+
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
 
@@ -20,6 +22,35 @@ ws.onmessage = (event) => {
   chatBox.appendChild(div);
 
   chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+gws.onmessage = function (event) {
+  try {
+    if (event.data === "block_temp_for_all") {
+      const start_button = document.getElementById("button_start");
+      if (start_button) {
+        // start_button.disabled = true;
+        // start_button.innerText = "une partie est en préparation"
+        start_button.style.pointerEvents = "none"; // désactive le clic
+        start_button.style.opacity = "0.4"; // feedback visuel
+        start_button.title = "Une partie est en préparation"; // tooltip
+      }
+    }
+    if (event.data === "all_join_pr") {
+      const join_button = document.createElement("button");
+      join_button.innerText = "Rejoindre la partie";
+      join_button.onclick = function () {
+        location.replace("https://localhost:8080/pr.html");
+      };
+    } else {
+      const message = document.createElement("div");
+      message.textContent = event.data;
+      document.getElementById("chatbox").appendChild(message);
+    }
+  } catch {
+    console.error("Erreur réseau:", error);
+    return false;
+  }
 };
 async function loadGroup() {
   const response = await fetch("https://localhost:3000/groups", {
@@ -193,6 +224,25 @@ async function LoadMessages() {
 
   chatBox.scrollTop = chatBox.scrollHeight;
 }
+
+function _start_pr() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send("pr_button_click");
+
+    console.log("Envoi de start_pr réussi, préparation de la redirection...");
+
+    ws.onclose = null;
+
+    setTimeout(() => {
+      ws.close(); // Ferme proprement
+      location.replace(`https://localhost:8080/pr_settings.html`);
+    }, 200);
+  } else {
+    console.warn("Le WebSocket n'est pas connecté. Redirection directe.");
+    location.replace(`https://localhost:8080/pr_settings.html`);
+  }
+}
+
 LoadMessages();
 LoadUsers();
 loadGroup();
