@@ -12,17 +12,10 @@
 
 ```bash
 git clone <url-du-projet>
-cd bonthebonpain
 ```
-
----
-
-## 2. Configuration du Frontend
-
-Se placer dans le dossier du front :
-
+Se placer à la racine du projet :
 ```bash
-cd front
+cd bonthebonpain
 ```
 
 Créer le fichier `.env` :
@@ -33,6 +26,15 @@ touch .env
 
 Remplir le fichier `.env` en vous basant sur le fichier `envExemple`.
 
+---
+
+## 2. Configuration du Frontend
+
+Se placer dans le dossier du front :
+
+```bash
+cd front
+```
 Générer les certificats SSL :
 
 ```bash
