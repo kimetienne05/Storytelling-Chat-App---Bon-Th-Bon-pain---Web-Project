@@ -1,6 +1,6 @@
-function searchUser(isadmin) {
-  let username = document.getElementById("Nom").value;
-  let passwd = document.getElementById("Mdp").value;
+function _searchUser(isadmin) {
+  const username = document.getElementById("Nom").value;
+  const passwd = document.getElementById("Mdp").value;
   fetch(`https://localhost:3000/login`, {
     method: "POST",
     mode: "cors",
@@ -29,7 +29,7 @@ function searchUser(isadmin) {
     });
 }
 
-function testCookie() {
+function _testCookie() {
   fetch(`https://localhost:3000/test_cookie`, {
     method: "GET",
     mode: "cors",
@@ -49,9 +49,9 @@ function testCookie() {
     });
 }
 
-function inscription() {
-  let username = document.getElementById("Nom").value;
-  let passwd = document.getElementById("Mdp").value;
+function _inscription() {
+  const username = document.getElementById("Nom").value;
+  const passwd = document.getElementById("Mdp").value;
   fetch(`https://localhost:3000/inscription`, {
     method: "POST",
     mode: "cors",

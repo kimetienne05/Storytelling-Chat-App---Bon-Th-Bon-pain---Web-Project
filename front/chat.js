@@ -1,7 +1,5 @@
-const localip = window.location.hostname;
-
 let ws = null;
-let send_message_button = document.getElementById("send");
+const send_message_button = document.getElementById("send");
 const new_message = document.getElementById("new_message");
 let refreshInterval = null;
 connectWebSocket();
@@ -26,7 +24,7 @@ async function connectWebSocket() {
     if (!refreshed) return;
   }
 
-  ws = new WebSocket(`wss://localhost:3000/chat`);
+  ws = new WebSocket(`wss:///localhost:3000/chat`);
 
   ws.onopen = function () {
     console.log("WebSocket connection established.");
@@ -107,7 +105,7 @@ async function attemptRefreshToken() {
       return true;
     } else {
       console.error("Échec du refresh, redirection login");
-      window.location.href = "/login";
+      globalThis.location.href = "/login";
       return false;
     }
   } catch (error) {
@@ -116,7 +114,7 @@ async function attemptRefreshToken() {
   }
 }
 
-function start_pr() {
+function _start_pr() {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send("pr_button_click");
 

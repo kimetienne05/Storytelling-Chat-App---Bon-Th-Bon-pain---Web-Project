@@ -1,4 +1,4 @@
-const params = new URLSearchParams(window.location.search);
+const params = new URLSearchParams(globalThis.location.search);
 const groupId = params.get("id");
 let allUsers = [];
 const ws = new WebSocket("wss://localhost:3000/chat");
@@ -68,10 +68,10 @@ async function loadGroup() {
 
 loadGroup();
 
-async function Accueil() {
-  window.location.href = "accueil.html";
+function _Accueil() {
+  globalThis.location.href = "accueil.html";
 }
-function CreePopup() {
+function _CreePopup() {
   console.log("popup ouvert");
   document.getElementById("popup").style.display = "block";
   LoadUsers();
@@ -92,10 +92,10 @@ async function LoadUsers() {
 function FermerPopup() {
   document.getElementById("popup").style.display = "none";
 }
-async function InviteUsers() {
-  let checkedUsers = document.querySelectorAll("#userList input:checked");
+async function _InviteUsers() {
+  const checkedUsers = document.querySelectorAll("#userList input:checked");
 
-  let invitedUsers = [];
+  const invitedUsers = [];
 
   checkedUsers.forEach((u) => {
     invitedUsers.push(u.value);
@@ -117,12 +117,12 @@ async function InviteUsers() {
 }
 
 function DisplayUsers(users) {
-  let userList = document.getElementById("userList");
+  const userList = document.getElementById("userList");
 
   userList.innerHTML = "";
 
   for (let i = 0; i < users.length; i++) {
-    let div = document.createElement("div");
+    const div = document.createElement("div");
 
     div.className = "userItem";
 
@@ -135,20 +135,20 @@ function DisplayUsers(users) {
   }
 }
 
-function FilterUsers() {
-  let search = document
+function _FilterUsers() {
+  const search = document
     .getElementById("searchUser")
     .value
     .toLowerCase();
 
-  let filtered = allUsers.filter((user) =>
+  const filtered = allUsers.filter((user) =>
     user.userName.toLowerCase().includes(search)
   );
 
   DisplayUsers(filtered);
 }
 async function LoadMembers() {
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(globalThis.location.search);
   const groupId = params.get("id");
 
   const response = await fetch(
@@ -162,14 +162,14 @@ async function LoadMembers() {
 
   container.innerHTML = "";
 
-  for (let m of members) {
-    let div = document.createElement("div");
+  for (const m of members) {
+    const div = document.createElement("div");
     div.textContent = m.userName;
 
     container.appendChild(div);
   }
 }
-async function QuitGroup() {
+async function _QuitGroup() {
   await fetch("https://localhost:3000/group/leave", {
     method: "POST",
     credentials: "include",
@@ -181,9 +181,9 @@ async function QuitGroup() {
     }),
   });
 
-  window.location.href = "accueil.html";
+  globalThis.location.href = "accueil.html";
 }
-function SendMessage() {
+function _SendMessage() {
   const input = document.getElementById("chatInput");
 
   const message = input.value;
@@ -225,7 +225,7 @@ async function LoadMessages() {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function start_pr() {
+function _start_pr() {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send("pr_button_click");
 

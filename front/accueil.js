@@ -11,21 +11,21 @@ async function LoadUsers() {
 
   DisplayUsers(allUsers);
 }
-function FermerPopup() {
+function _FermerPopup() {
   document.getElementById("popup").style.display = "none";
 }
 
-function CreeGroup() {
+function _CreeGroup() {
   document.getElementById("popup").style.display = "block";
 }
-async function AddGroup() {
-  let nom = document.getElementById("nomGroupe").value;
+async function _AddGroup() {
+  const nom = document.getElementById("nomGroupe").value;
 
-  let checkedUsers = document.querySelectorAll(
+  const checkedUsers = document.querySelectorAll(
     "#userList input:checked",
   );
 
-  let invitedUsers = [];
+  const invitedUsers = [];
 
   checkedUsers.forEach((user) => {
     invitedUsers.push(user.value);
@@ -55,12 +55,12 @@ async function AddGroup() {
   console.log(data);
 
   // AJOUT DIRECT DU BOUTON
-  let bouton = document.createElement("button");
+  const bouton = document.createElement("button");
 
   bouton.textContent = nom;
 
   bouton.onclick = function () {
-    window.location.href = "group.html?id=" + groups[i].idGroup + "&name=" +
+    globalThis.location.href = "group.html?id=" + groups[i].idGroup + "&name=" +
       groups[i].groupName;
   };
 
@@ -93,12 +93,12 @@ async function LoadGroups() {
     container.innerHTML = "";
 
     for (let i = 0; i < groups.length; i++) {
-      let bouton = document.createElement("button");
+      const bouton = document.createElement("button");
 
       bouton.textContent = groups[i].groupName;
 
       bouton.onclick = function () {
-        window.location.href = "group.html?id=" + groups[i].idGroup;
+        globalThis.location.href = "group.html?id=" + groups[i].idGroup;
       };
 
       container.appendChild(bouton);
@@ -108,12 +108,12 @@ async function LoadGroups() {
   }
 }
 function DisplayUsers(users) {
-  let userList = document.getElementById("userList");
+  const userList = document.getElementById("userList");
 
   userList.innerHTML = "";
 
   for (let i = 0; i < users.length; i++) {
-    let div = document.createElement("div");
+    const div = document.createElement("div");
 
     div.className = "userItem";
 
@@ -126,13 +126,13 @@ function DisplayUsers(users) {
   }
 }
 
-function FilterUsers() {
-  let search = document
+function _FilterUsers() {
+  const search = document
     .getElementById("searchUser")
     .value
     .toLowerCase();
 
-  let filtered = allUsers.filter((user) =>
+  const filtered = allUsers.filter((user) =>
     user.userName.toLowerCase().includes(search)
   );
 
@@ -153,18 +153,18 @@ async function LoadInvitations() {
   container.innerHTML = "";
 
   for (let i = 0; i < invitations.length; i++) {
-    let div = document.createElement("div");
+    const div = document.createElement("div");
 
     div.innerHTML = `
             <p>${invitations[i].groupName}</p>
 
-            <button onclick="HandleInvitation(${
+            <button onclick="_HandleInvitation(${
       invitations[i].idGroup
     }, 'accept')">
                 Accepter
             </button>
 
-            <button onclick="HandleInvitation(${
+            <button onclick="_HandleInvitation(${
       invitations[i].idGroup
     }, 'refuse')">
                 Refuser
@@ -176,7 +176,7 @@ async function LoadInvitations() {
     container.appendChild(div);
   }
 }
-async function HandleInvitation(idGroup, action) {
+async function _HandleInvitation(idGroup, action) {
   await fetch(
     "https://localhost:3000/invitation",
     {
@@ -199,7 +199,7 @@ async function HandleInvitation(idGroup, action) {
   location.reload();
 }
 
-async function Logout() {
+async function _Logout() {
   await fetch(
     "https://localhost:3000/logout",
     {
@@ -208,10 +208,10 @@ async function Logout() {
     },
   );
 
-  window.location.href = "login.html";
+  globalThis.location.href = "login.html";
 }
 
-window.onload = () => {
+globalThis.onload = () => {
   LoadGroups();
   LoadUsers();
 

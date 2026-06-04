@@ -1,28 +1,41 @@
-import {
-  Application,
-  Context,
-  Router,
-} from "https://deno.land/x/oak@v17.1.6/mod.ts";
-import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
+import { Application, Router } from "https://deno.land/x/oak@v17.1.6/mod.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { create, verify } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { Client } from "https://deno.land/x/mysql@v2.12.1/mod.ts";
 
+// Structure d'un "Thé" (ou Potin) stocké en Base de Données ou historique
+interface Tea {
+  idTea?: number; // Optionnel si non encore inséré (auto-increment)
+  content: string;
+  isTrue: boolean; // ou number selon comment vous stockez le booléen en SQL (0 ou 1)
+  idUser: number;
+  userName?: string; // Si vous faites une jointure pour récupérer le nom
+  idGroup: number;
+  creationDate?: string | Date;
+}
+
+// Structure d'un potin en cours de traitement dans le jeu (potin_pool)
+interface GamePotin {
+  id: string | number; // Identifiant unique dans la partie
+  content: string;
+  isTrue: boolean;
+  idUser: number; // L'auteur du potin
+  userName: string; // Le nom de l'auteur (essentiel pour le "guess")
+}
+
 const router = new Router();
 const app = new Application();
-const clients = new Set();
+const _clients = new Set();
 let current_pr_settings = { nbp: 3, prtime: 60, rtime: 30 };
-let old_tea: any[] = [];
-let potin_pool: any[] = [];
+const old_tea: Tea[] = [];
+let potin_pool: GamePotin[] = [];
 const game_players: Map<string, { ws: WebSocket; score: number }> = new Map();
 let round_answers: Map<string, { auteur: string; verite: boolean }> = new Map();
-let current_potin: any = null;
+let current_potin: GamePotin | null = null;
 let round_timer: number | null = null;
 //pepper:
 const PEPPER = Deno.env.get("PASSWORD_PEPPER");
 if (!PEPPER) throw new Error("PASSWORD_PEPPER env var is not set");
-
-const SALT_ROUNDS = 12;
 
 //pour tokens:
 export const ACCESS_TOKEN_EXPIRES_IN = 60 * 15; // 15 minutes in seconds
@@ -38,17 +51,9 @@ const db = await new Client().connect({
   db: Deno.env.get("MYSQL_DATABASE") || "test",
 });
 
-const { rows: data } = await db.execute("SELECT * FROM User");
+//const { rows: data } = await db.execute("SELECT * FROM User");
 //console.log(await db.execute("SELECT VERSION() AS version"));
 
-app.use(
-  oakCors({
-    origin: `https://localhost:8080`,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  }),
-);
 // fonctions
 
 async function get_hash(password: string): Promise<string> {
@@ -94,6 +99,23 @@ const secretKey = await crypto.subtle.importKey(
 );
 
 const connections: WebSocket[] = [];
+
+//pour inscription
+function strcmp(a: string, b: string) {
+  if (a.toString() < b.toString()) return -1;
+  if (a.toString() > b.toString()) return 1;
+  return 0;
+}
+
+function goodUsername(name: string): string {
+  if (name.length > 50) {
+    return "Name est trop long";
+  }
+  if (/(Kim|Emie|Aanor)/.test(name)) {
+    return "Name contient un des noms sacrés";
+  }
+  return "";
+}
 
 // routes
 
@@ -147,7 +169,7 @@ router.post("/refresh", async (ctx) => {
     const payload = await verify(refreshToken, secretKey);
     username = payload.userName as string;
     table = (payload.isAdmin as boolean) ? "Admin" : "User";
-  } catch (err) {
+  } catch (_err) {
     ctx.response.status = 401;
     ctx.response.body = { error: "Erreur refresh token" };
     return;
@@ -281,6 +303,16 @@ router.post("/inscription", async (ctx) => {
     console.log("existe deja ");
     return;
   }
+  const ResUserNameTest = goodUsername(name);
+  if (strcmp(ResUserNameTest, "") == 1) {
+    ctx.response.status = 406;
+    ctx.response.body = { error: ResUserNameTest };
+    console.log(
+      "Vous avez violez les lois des Usernames et serez executés demain à midi",
+    );
+    return;
+  }
+
   const pass_hash = await get_hash(passwd);
 
   await db.execute(
@@ -288,7 +320,6 @@ router.post("/inscription", async (ctx) => {
     [name, pass_hash],
   );
 
-  // ligne ~163 — remplace le bloc inscription
   const token = await create(
     { alg: "HS512", typ: "JWT" },
     {
@@ -434,12 +465,7 @@ router.get("/chat", authorizationMiddleware, userMiddleware, (ctx) => {
   };
 
   ws.onmessage = async (event) => {
-    try {
-      const data = JSON.parse(event.data);
-    } catch {
-      console.log("Message non-JSON reçu dans /chat:", event.data);
-      return;
-    }
+    const data = JSON.parse(event.data);
 
     if (data.type !== "chat:message") return;
 
@@ -470,14 +496,14 @@ router.get("/chat", authorizationMiddleware, userMiddleware, (ctx) => {
   };
 });
 
-router.get("/start_pr", authorizationMiddleware, async (ctx) => {
+router.get("/start_pr", authorizationMiddleware, (ctx) => {
   if (!ctx.isUpgradable) {
     ctx.throw(501);
   }
 
   const ws = ctx.upgrade();
 
-  const user = ctx.state.user;
+  const _user = ctx.state.user;
 
   ws.onopen = () => {
     console.log("WebSocket connection established.");
@@ -488,7 +514,7 @@ router.get("/start_pr", authorizationMiddleware, async (ctx) => {
     console.log("Error:", error);
   };
 
-  ws.onmessage = async (event) => {
+  ws.onmessage = (event) => {
     if (event.data === "pr_button_click") {
       for (let i = 0; i < connections.length; i++) {
         if (connections[i].readyState === WebSocket.OPEN) {
@@ -729,7 +755,7 @@ router.post("/settings", async (ctx) => {
 
 let adminPartieUser: string | null = null;
 
-router.get("/pr", authorizationMiddleware, async (ctx) => {
+router.get("/pr", authorizationMiddleware, (ctx) => {
   if (!ctx.isUpgradable) {
     ctx.throw(501);
   }
@@ -949,7 +975,9 @@ router.get("/pr", authorizationMiddleware, async (ctx) => {
             }
           }
         }
-      } catch {}
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 });
@@ -962,7 +990,7 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
     const truthValue = body.truthValue === true ? 1 : 0;
     const isNew = 1;
     const today = new Date().toISOString().slice(0, 10);
-    const eventDate = body.eventDate || null;
+    const _eventDate = body._eventDate || null;
 
     const current_username = ctx.state.tokenData.userName;
     const userResult = await db.execute(
@@ -981,7 +1009,7 @@ router.post("/pr", authorizationMiddleware, async (ctx) => {
 
     const idUser = userRows[0].idUser;
 
-    const userRes = await db.execute(
+    const _userRes = await db.execute(
       "SELECT idUser FROM User WHERE userName = ?",
       [current_username],
     );
@@ -1015,7 +1043,7 @@ router.post("/pr_bis", authorizationMiddleware, async (ctx) => {
 
     const isNew = 0;
     const today = new Date().toISOString().slice(0, 10);
-    const eventDate = body.eventDate || null;
+    const _eventDate = body._eventDate || null;
     const current_username = ctx.state.tokenData.userName;
 
     const userResult = await db.execute(
@@ -1068,6 +1096,93 @@ router.get("/gestion_potin", authorizationMiddleware, async (ctx) => {
   }
 });
 
+router.post("/logout", (ctx) => {
+  ctx.response.headers.set(
+    "Set-Cookie",
+    "auth_token=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/",
+  );
+
+  ctx.response.headers.append(
+    "Set-Cookie",
+    "refresh_token=; HttpOnly; SameSite=Strict; Max-Age=0; Path=/",
+  );
+
+  ctx.response.body = {
+    message: "Déconnecté",
+  };
+});
+router.get(
+  "/invitations",
+  authorizationMiddleware,
+  userMiddleware,
+  async (ctx) => {
+    const user = ctx.state.user;
+
+    const res = await db.execute(
+      `
+            SELECT
+                Groups.idGroup,
+                Groups.groupName
+            FROM UserGroup
+            JOIN Groups
+                ON UserGroup.idGroup = Groups.idGroup
+            WHERE UserGroup.idUser = ?
+            AND UserGroup.status = 'waiting'
+        `,
+      [user.idUser],
+    );
+
+    ctx.response.body = res.rows;
+  },
+);
+router.post(
+  "/group/leave",
+  authorizationMiddleware,
+  userMiddleware,
+  async (ctx) => {
+    const body = await ctx.request.body.json();
+    const { idGroup } = body;
+
+    const user = ctx.state.user;
+
+    await db.execute(
+      `
+        DELETE FROM UserGroup
+        WHERE idUser = ? AND idGroup = ?
+        `,
+      [user.idUser, idGroup],
+    );
+
+    ctx.response.body = {
+      message: "Groupe quitté",
+    };
+  },
+);
+
+router.get(
+  "/messages/:id",
+  authorizationMiddleware,
+  async (ctx) => {
+    const groupId = ctx.params.id;
+
+    const res = await db.execute(
+      `
+            SELECT
+                Message.content,
+                Message.sendDate,
+                User.userName
+            FROM Message
+            JOIN User
+                ON Message.idUser = User.idUser
+            WHERE Message.idGroup = ?
+            ORDER BY Message.sendDate ASC
+        `,
+      [groupId],
+    );
+
+    ctx.response.body = res.rows;
+  },
+);
 router.post("/logout", (ctx) => {
   ctx.response.headers.set(
     "Set-Cookie",

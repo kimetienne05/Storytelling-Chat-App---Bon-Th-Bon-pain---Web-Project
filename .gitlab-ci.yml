@@ -1,0 +1,73 @@
+image: denoland/deno:latest
+
+# CORRECTION ICI : Lint doit être le tout premier stage
+stages:
+  - lint
+  - test
+  - build
+
+variables:
+  DENO_VERSION: "2.5.0"
+  IMAGE_BASE: ${CI_REGISTRY_IMAGE}
+
+# code est propre ou pas? c'est ça
+lint:
+  stage: lint
+  script:
+    - echo "Vérification du code..."
+    - deno lint
+    - deno fmt --check
+
+# test de /test
+test:
+  stage: test
+  script:
+    - echo "Lancement des tests..."
+    - deno test --allow-env --no-check ./tests/
+    - echo "Terminé !"
+
+# c'est les builds quoi
+.build:
+  stage: build
+  image: docker:27
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  before_script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - echo "Build du commit $CI_COMMIT_SHORT_SHA sur la branche $CI_COMMIT_BRANCH"
+    - echo "Refaire les certificats pem"
+    - echo "$CERT_PEM" > front/cert.pem
+    - echo "$KEY_PEM" > front/key.pem
+    - echo "$CERT_PEM" > back/cert.pem
+    - echo "$KEY_PEM" > back/key.pem
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+build-back:
+  extends: .build
+  script:
+    - echo "build back"
+    - docker build -f back/Dockerfile -t $IMAGE_BASE/back:$CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/back:latest back/
+    - echo "On push"
+    - docker push $IMAGE_BASE/back:$CI_COMMIT_SHORT_SHA
+    - docker push $IMAGE_BASE/back:latest
+    - echo "fini back"
+
+build-front:
+  extends: .build
+  script:
+    - echo "build front"
+    - docker build -f front/Dockerfile -t $IMAGE_BASE/front:$CI_COMMIT_SHORT_SHA -t $IMAGE_BASE/front:latest front/
+    - echo "On push"
+    - docker push $IMAGE_BASE/front:$CI_COMMIT_SHORT_SHA
+    - docker push $IMAGE_BASE/front:latest
+    - echo "fini front"
+
+build-db:
+  extends: .build
+  script:
+    - docker pull mariadb:10.11
+    - docker tag mariadb:10.11 $IMAGE_BASE/db:latest
+    - docker tag mariadb:10.11 $IMAGE_BASE/db:10.11
+    - docker push $IMAGE_BASE/db:latest
+    - docker push $IMAGE_BASE/db:10.11
