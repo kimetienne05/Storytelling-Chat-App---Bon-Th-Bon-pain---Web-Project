@@ -131,6 +131,18 @@ CREATE TABLE Message (
 );
 INSERT INTO Admin(userName, passwordHash)
 VALUES (
-    'admin',
+    'Kim',
+    '$2a$10$Zk4Je37wS.2b88SjFkAOZu/13Vb8R4Q7tCd2oNKW450X0yWThJ5RW'
+);
+
+INSERT INTO Admin(userName, passwordHash)
+VALUES (
+    'Emie',
+    '$2a$10$Zk4Je37wS.2b88SjFkAOZu/13Vb8R4Q7tCd2oNKW450X0yWThJ5RW'
+);
+
+INSERT INTO Admin(userName, passwordHash)
+VALUES (
+    'Aanor',
     '$2a$10$Zk4Je37wS.2b88SjFkAOZu/13Vb8R4Q7tCd2oNKW450X0yWThJ5RW'
 );
