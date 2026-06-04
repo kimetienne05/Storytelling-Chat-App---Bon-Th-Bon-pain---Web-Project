@@ -1,4 +1,5 @@
 let allUsers = [];
+let groups = [];
 
 async function LoadUsers() {
   const response = await fetch("https://localhost:3000/users", {
@@ -60,14 +61,15 @@ async function _AddGroup() {
   bouton.textContent = nom;
 
   bouton.onclick = function () {
-    globalThis.location.href = "group.html?id=" + groups[i].idGroup + "&name=" +
-      groups[i].groupName;
+    globalThis.location.href = "group.html?id=" + data.idGroup + "&name=" +
+      data.groupName;
   };
 
   document.getElementById("groupList").appendChild(bouton);
 
   // fermer popup
   document.getElementById("popup").style.display = "none";
+  LoadGroups();
 }
 async function LoadGroups() {
   try {
@@ -81,7 +83,7 @@ async function LoadGroups() {
       return;
     }
 
-    const groups = await response.json();
+    groups = await response.json();
 
     const container = document.getElementById("groupList");
 

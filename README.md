@@ -13,7 +13,9 @@
 ```bash
 git clone <url-du-projet>
 ```
+
 Se placer à la racine du projet :
+
 ```bash
 cd bonthebonpain
 ```
@@ -35,6 +37,7 @@ Se placer dans le dossier du front :
 ```bash
 cd front
 ```
+
 Générer les certificats SSL :
 
 ```bash
@@ -94,18 +97,9 @@ docker compose up -d --build
 
 ### Identifiants administrateur mit automatiquement dans la base pour les tests
 
-admin et admin
+Aanor ou Kim ou Emie et mdp:admin
 
-## 5. Redémarrer l'application
-
-```bash
-docker compose down
-docker compose up -d --build
-```
-
----
-
-## 6. Accéder à l'application
+## 5. Accéder à l'application
 
 Ouvrir un navigateur et accéder à :
 
