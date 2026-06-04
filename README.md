@@ -2,9 +2,9 @@
 
 ## Prérequis
 
-* Git
-* Docker Desktop ou Docker Engine + Docker Compose
-* OpenSSL
+- Git
+- Docker Desktop ou Docker Engine + Docker Compose
+- OpenSSL
 
 ---
 
@@ -91,7 +91,8 @@ docker compose up -d --build
 ```
 
 ### Identifiants administrateur mit automatiquement dans la base pour les tests
- admin et admin
+
+admin et admin
 
 ## 5. Redémarrer l'application
 
@@ -110,4 +111,6 @@ Ouvrir un navigateur et accéder à :
 https://localhost:8080
 ```
 
-> Le navigateur affichera probablement un avertissement de sécurité lié au certificat SSL auto-signé. Il est normal de l'accepter pour un environnement de développement.
+> Le navigateur affichera probablement un avertissement de sécurité lié au
+> certificat SSL auto-signé. Il est normal de l'accepter pour un environnement
+> de développement.
