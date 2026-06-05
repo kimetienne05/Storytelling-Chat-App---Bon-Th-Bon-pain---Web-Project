@@ -14,6 +14,7 @@ COPY --from=builderfront /app/front_server.ts ./
 COPY --from=builderfront /app/key.pem ./
 COPY --from=builderfront /app/cert.pem ./
 COPY --from=builderfront /app/dist ./dist
+COPY --from=builderfront /app/image ./dist/image
 ENV DENO_DIR=/deno-dir
 RUN addgroup -g 1001 -S app && adduser -u 1001 -S app -G app
 RUN chown -R app:app /app /deno-dir
