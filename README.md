@@ -13,6 +13,11 @@
 ```bash
 git clone <url-du-projet>
 ```
+En raison d'un oubli de clic sur le bouton MERGE avant 8h, la version finale du site est sur la branche Potin_roulette. 
+> Nous nous excusons de cet oubli.
+```bash
+git switch Potin_roulette
+```
 
 Se placer à la racine du projet :
 
